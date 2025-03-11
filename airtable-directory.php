@@ -43,77 +43,91 @@ function fetch_airtable_data($table) {
     return isset($data['records']) ? $data['records'] : [];
 }
 
+// Register and enqueue plugin styles
+function airtable_directory_enqueue_styles() {
+    wp_register_style(
+        'airtable-directory-styles', 
+        plugins_url('css/airtable-directory.css', __FILE__),
+        array(),
+        '1.0.0'
+    );
+    wp_enqueue_style('airtable-directory-styles');
+}
+add_action('wp_enqueue_scripts', 'airtable_directory_enqueue_styles');
+
 function display_staff_directory($atts) {
     $atts = shortcode_atts(array(
-        'department' => '',  // Default: show all
-        'show' => 'name,title,department,email,phone,photo' // Default: show all fields
+        'department' => '',  
+        'show' => 'name,title,department,email,phone,photo'  
     ), $atts, 'staff_directory');
 
-    // Convert the show list into an array for easy checking
     $visible_fields = array_map('trim', explode(',', strtolower($atts['show'])));
-
     $records = fetch_airtable_data(AIRTABLE_TABLE_NAME);
     if (!$records) {
         return '<p>No staff members found.</p>';
     }
 
-    $output = '<div class="staff-directory"><ul class="staff-list">';
+    $output = '<div class="staff-directory">';
 
     foreach ($records as $record) {
         $fields = isset($record['fields']) ? $record['fields'] : [];
-        
+
         $name = isset($fields['EmployeeName']) ? esc_html($fields['EmployeeName']) : 'Unknown';
         $title = isset($fields['Title']) ? esc_html($fields['Title']) : 'No Title';
-        $dept = isset($fields['Department']) ? implode(', ', $fields['Department']) : 'No Department';
+        $dept = isset($fields['Department']) ? array_map('html_entity_decode', $fields['Department']) : ['No Department'];
         $email = isset($fields['Email']) ? esc_html($fields['Email']) : 'No Email';
         $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
         $photo_url = isset($fields['Photo'][0]['url']) ? esc_url($fields['Photo'][0]['url']) : '';
 
-        // Check if filtering by department
-        if (!empty($atts['department']) && !in_array(strtolower($atts['department']), array_map('strtolower', $fields['Department']))) {
-            continue;
+        // Normalize department comparison to prevent encoding issues
+        if (!empty($atts['department'])) {
+            $requested_department = html_entity_decode(trim($atts['department']));
+            $matched = false;
+            foreach ($dept as $department_name) {
+                if (strcasecmp($requested_department, $department_name) === 0) {
+                    $matched = true;
+                    break;
+                }
+            }
+            if (!$matched) {
+                continue;
+            }
         }
 
-        $output .= "<li class='staff-member'>";
-
-        // Conditionally show photo
-        if (in_array('photo', $visible_fields) && !empty($photo_url)) {
-            $output .= "<img src='$photo_url' alt='Photo of $name' class='staff-photo'>";
+        $output .= "<div class='staff-card'>";
+        
+        // Photo section
+        if (in_array('photo', $visible_fields)) {
+            $output .= "<div class='staff-photo-container'>";
+            if (!empty($photo_url)) {
+                $output .= "<img src='$photo_url' alt='Photo of $name' class='staff-photo'>";
+            } else {
+                // Placeholder for missing photos
+                $output .= "<div class='staff-photo no-photo'><span>No Photo</span></div>";
+            }
+            $output .= "</div>";
         }
 
-        // Start text block
         $output .= "<div class='staff-info'>";
-
-        // Conditionally show name
         if (in_array('name', $visible_fields)) {
             $output .= "<strong>$name</strong><br>";
         }
-
-        // Conditionally show title
         if (in_array('title', $visible_fields)) {
             $output .= "Title: $title<br>";
         }
-
-        // Conditionally show department
         if (in_array('department', $visible_fields)) {
-            $output .= "Department: $dept<br>";
+            $output .= "Department: " . implode(', ', $dept) . "<br>";
         }
-
-        // Conditionally show email
         if (in_array('email', $visible_fields) && $email !== 'No Email') {
             $output .= "Email: $email<br>";
         }
-
-        // Conditionally show phone
         if (in_array('phone', $visible_fields) && $phone !== 'No Phone') {
             $output .= "Phone: $phone<br>";
         }
-
-        $output .= "</div></li>";
+        $output .= "</div></div>";
     }
 
-    $output .= '</ul></div>';
-
+    $output .= '</div>'; // Close staff-directory
     return $output;
 }
 add_shortcode('staff_directory', 'display_staff_directory');
