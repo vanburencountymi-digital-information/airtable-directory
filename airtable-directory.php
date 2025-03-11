@@ -58,21 +58,32 @@ function display_staff_directory($atts) {
     foreach ($records as $record) {
         $fields = isset($record['fields']) ? $record['fields'] : [];
         
-        // Update field names to match Airtable
         $name = isset($fields['EmployeeName']) ? esc_html($fields['EmployeeName']) : 'Unknown';
         $title = isset($fields['Title']) ? esc_html($fields['Title']) : 'No Title';
-        $dept = isset($fields['Department']) ? esc_html($fields['Department']) : 'No Department';
+        $dept = isset($fields['Department']) ? implode(', ', $fields['Department']) : 'No Department';
         $email = isset($fields['Email']) ? esc_html($fields['Email']) : 'No Email';
         $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
 
-        // Filter by department if specified
-        if (!empty($atts['department']) && strtolower($dept) !== strtolower($atts['department'])) {
+        // Handle employee photo (Check if exists & extract URL)
+        $photo_url = isset($fields['Photo'][0]['url']) ? esc_url($fields['Photo'][0]['url']) : '';
+
+        // Check if filtering by department
+        if (!empty($atts['department']) && !in_array(strtolower($atts['department']), array_map('strtolower', $fields['Department']))) {
             continue;
         }
 
-        $output .= "<li><strong>$name</strong><br>Title: $title<br>Department: $dept";
+        // Start list item
+        $output .= "<li class='staff-member'>";
         
-        // Only show Email/Phone if they exist
+        // Add photo if exists
+        if (!empty($photo_url)) {
+            $output .= "<img src='$photo_url' alt='Photo of $name' class='staff-photo'>";
+        }
+
+        // Add text info
+        $output .= "<div class='staff-info'>";
+        $output .= "<strong>$name</strong><br>Title: $title<br>Department: $dept";
+
         if ($email !== 'No Email') {
             $output .= "<br>Email: $email";
         }
@@ -80,7 +91,7 @@ function display_staff_directory($atts) {
             $output .= "<br>Phone: $phone";
         }
 
-        $output .= "</li>";
+        $output .= "</div></li>";
     }
 
     $output .= '</ul></div>';
@@ -88,4 +99,5 @@ function display_staff_directory($atts) {
     return $output;
 }
 add_shortcode('staff_directory', 'display_staff_directory');
+
 
