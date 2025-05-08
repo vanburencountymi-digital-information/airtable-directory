@@ -45,5 +45,15 @@ class Airtable_Directory {
             AIRTABLE_DIRECTORY_VERSION
         );
         wp_enqueue_style('airtable-directory-styles');
+        
+        // Enqueue the search functionality JavaScript
+        wp_register_script(
+            'airtable-directory-search',
+            AIRTABLE_DIRECTORY_PLUGIN_URL . 'assets/js/airtable-directory-search.js',
+            array(),
+            AIRTABLE_DIRECTORY_VERSION,
+            true
+        );
+        wp_enqueue_script('airtable-directory-search');
     }
 } 

@@ -241,6 +241,7 @@
 .card-view-container,
 .table-view-container {
     display: none;
+    overflow-x: scroll;
 }
 
 .card-view-container.active,
@@ -254,6 +255,7 @@
     border-collapse: collapse;
     margin-bottom: 20px;
     background: white;
+    overflow-x: scroll;
 }
 
 .staff-directory-table th,

@@ -302,7 +302,7 @@ class Airtable_Directory_Shortcodes {
             $directory_id = 'staff-directory-' . uniqid();
             
             // Search form and view toggle
-            $output = '<div class="searchable-staff-directory" id="' . $directory_id . '" data-default-view="' . $default_view . '">';
+            $output = '<div class="searchable-staff-directory" id="' . $directory_id . '" data-default-view="' . $default_view . '" data-per-page="' . $per_page . '">';
             
             // Control bar with search and view toggle
             $output .= '<div class="directory-control-bar">';
@@ -404,8 +404,9 @@ class Airtable_Directory_Shortcodes {
             $output .= '<div class="table-view-container' . ($default_view == 'table' ? ' active' : '') . '">';
             $output .= '<table class="staff-directory-table">';
             
-            // Table header
+            // Table headers
             $output .= '<thead><tr>';
+            
             if (in_array('photo', $visible_fields)) {
                 $output .= '<th class="column-photo">Photo</th>';
             }
@@ -424,12 +425,11 @@ class Airtable_Directory_Shortcodes {
             if (in_array('phone', $visible_fields)) {
                 $output .= '<th class="column-phone">Phone</th>';
             }
-            $output .= '</tr></thead>';
             
-            // Table body
+            $output .= '</tr></thead>';
             $output .= '<tbody>';
             
-            // Process the staff data for table view
+            // Table rows
             foreach ($records as $record) {
                 $fields = isset($record['fields']) ? $record['fields'] : [];
                 
@@ -439,7 +439,7 @@ class Airtable_Directory_Shortcodes {
                 $email = isset($fields['Email']) ? esc_html($fields['Email']) : 'No Email';
                 $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
                 
-                // Photo URL extraction (same as above)
+                // Photo URL extraction
                 $photo_url = '';
                 if (isset($fields['Photo'])) {
                     if (is_array($fields['Photo']) && !empty($fields['Photo'])) {
@@ -460,9 +460,8 @@ class Airtable_Directory_Shortcodes {
                 // Create the table row with data attributes for searching
                 $output .= "<tr class='staff-row' data-name='" . strtolower($name) . "' data-title='" . strtolower($title) . "' data-department='" . strtolower($dept) . "'>";
                 
-                // Add cells for each visible field
                 if (in_array('photo', $visible_fields)) {
-                    $output .= "<td class='column-photo'>";
+                    $output .= "<td class='column-photo' data-label='Photo'>";
                     if (!empty($photo_url)) {
                         $output .= "<img src='$photo_url' alt='Photo of $name' class='staff-photo-thumbnail'>";
                     } else {
@@ -472,236 +471,50 @@ class Airtable_Directory_Shortcodes {
                 }
                 
                 if (in_array('name', $visible_fields)) {
-                    $output .= "<td class='column-name'>$name</td>";
+                    $output .= "<td class='column-name' data-label='Name'>$name</td>";
                 }
                 
                 if (in_array('title', $visible_fields)) {
-                    $output .= "<td class='column-title'>$title</td>";
+                    $output .= "<td class='column-title' data-label='Title'>$title</td>";
                 }
                 
                 if (in_array('department', $visible_fields)) {
-                    $output .= "<td class='column-department'>$dept</td>";
+                    $output .= "<td class='column-department' data-label='Department'>$dept</td>";
                 }
                 
                 if (in_array('email', $visible_fields)) {
-                    $output .= "<td class='column-email'>" . ($email !== 'No Email' ? $email : '') . "</td>";
+                    $output .= "<td class='column-email' data-label='Email'>" . ($email !== 'No Email' ? $email : '') . "</td>";
                 }
                 
                 if (in_array('phone', $visible_fields)) {
-                    $output .= "<td class='column-phone'>" . ($phone !== 'No Phone' ? $phone : '') . "</td>";
+                    $output .= "<td class='column-phone' data-label='Phone'>" . ($phone !== 'No Phone' ? $phone : '') . "</td>";
                 }
                 
                 $output .= "</tr>";
             }
             
-            $output .= '</tbody></table>';
+            $output .= '</tbody>';
+            $output .= '</table>';
             $output .= '</div>'; // End table-view-container
             
             // Pagination controls
             $output .= '<div class="pagination-controls">';
             $output .= '<div class="pagination-info">Showing <span class="showing-count">0</span> of <span class="total-count">0</span> staff members</div>';
+            
             $output .= '<div class="pagination-buttons">';
-            $output .= '<button class="prev-page" disabled>Previous</button>';
-            $output .= '<span class="page-info">Page <span class="current-page">1</span> of <span class="total-pages">1</span></span>';
-            $output .= '<button class="next-page" disabled>Next</button>';
+            $output .= '<button class="prev-page">&laquo; Previous</button>';
+            $output .= '<div class="page-info">Page <span class="current-page">1</span> of <span class="total-pages">1</span></div>';
+            $output .= '<button class="next-page">Next &raquo;</button>';
             $output .= '</div>';
-            $output .= '</div>';
+            
+            $output .= '</div>'; // End pagination-controls
             
             $output .= '</div>'; // End searchable-staff-directory
-            
-            // Add JavaScript for search, pagination, and view toggling
-            $output .= $this->get_directory_script($directory_id, $per_page);
-            
+
             return $output;
         } catch (Exception $e) {
             error_log('Error in searchable_staff_directory_shortcode: ' . $e->getMessage());
             return '<p>An error occurred while retrieving the staff directory. Please try again later.</p>';
         }
-    }
-
-    /**
-     * Get the JavaScript for the searchable directory
-     *
-     * @param string $directory_id Directory container ID
-     * @param int $per_page Items per page
-     * @return string JavaScript code
-     */
-    private function get_directory_script($directory_id, $per_page) {
-        ob_start();
-        ?>
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const directory = document.getElementById('<?php echo $directory_id; ?>');
-            if (!directory) return;
-            
-            const searchInput = document.getElementById('search-<?php echo $directory_id; ?>');
-            const cardViewBtn = directory.querySelector('.card-view-btn');
-            const tableViewBtn = directory.querySelector('.table-view-btn');
-            const cardViewContainer = directory.querySelector('.card-view-container');
-            const tableViewContainer = directory.querySelector('.table-view-container');
-            const staffCards = directory.querySelectorAll('.staff-card');
-            const staffRows = directory.querySelectorAll('.staff-row');
-            const filterCheckboxes = directory.querySelectorAll('.filter-checkbox');
-            const paginationInfo = directory.querySelector('.pagination-info');
-            const showingCount = directory.querySelector('.showing-count');
-            const totalCount = directory.querySelector('.total-count');
-            const currentPageEl = directory.querySelector('.current-page');
-            const totalPagesEl = directory.querySelector('.total-pages');
-            const prevButton = directory.querySelector('.prev-page');
-            const nextButton = directory.querySelector('.next-page');
-            
-            let currentPage = 1;
-            const perPage = <?php echo $per_page; ?>;
-            let filteredCards = [...staffCards];
-            let filteredRows = [...staffRows];
-            let currentView = directory.dataset.defaultView || 'card';
-            
-            // Initialize counts
-            totalCount.textContent = staffCards.length;
-            showingCount.textContent = staffCards.length;
-            
-            // Toggle between card and table views
-            function toggleView(view) {
-                currentView = view;
-                
-                // Update button states
-                cardViewBtn.classList.toggle('active', view === 'card');
-                tableViewBtn.classList.toggle('active', view === 'table');
-                
-                // Show/hide the appropriate view container
-                cardViewContainer.classList.toggle('active', view === 'card');
-                tableViewContainer.classList.toggle('active', view === 'table');
-                
-                // Re-apply current page after view change
-                goToPage(currentPage);
-            }
-            
-            // Search functionality
-            function performSearch() {
-                const searchTerm = searchInput.value.toLowerCase();
-                const enabledFilters = [];
-                
-                // Get enabled filters
-                filterCheckboxes.forEach(checkbox => {
-                    if (checkbox.checked) {
-                        enabledFilters.push(checkbox.dataset.filter);
-                    }
-                });
-                
-                // Filter staff cards
-                filteredCards = [...staffCards].filter(card => {
-                    if (searchTerm === '') return true;
-                    
-                    return enabledFilters.some(filter => {
-                        const value = card.dataset[filter];
-                        return value && value.includes(searchTerm);
-                    });
-                });
-                
-                // Filter staff rows
-                filteredRows = [...staffRows].filter(row => {
-                    if (searchTerm === '') return true;
-                    
-                    return enabledFilters.some(filter => {
-                        const value = row.dataset[filter];
-                        return value && value.includes(searchTerm);
-                    });
-                });
-                
-                // Update pagination
-                updatePagination();
-                goToPage(1);
-            }
-            
-            // Update pagination information
-            function updatePagination() {
-                const totalFiltered = currentView === 'card' ? filteredCards.length : filteredRows.length;
-                const totalPages = Math.ceil(totalFiltered / perPage);
-                
-                showingCount.textContent = totalFiltered;
-                totalPagesEl.textContent = totalPages > 0 ? totalPages : 1;
-                
-                // Adjust current page if needed
-                if (currentPage > totalPages) {
-                    currentPage = totalPages > 0 ? totalPages : 1;
-                }
-                currentPageEl.textContent = currentPage;
-                
-                // Update button states
-                prevButton.disabled = currentPage <= 1;
-                nextButton.disabled = currentPage >= totalPages || totalPages <= 1;
-            }
-            
-            // Go to specific page
-            function goToPage(page) {
-                currentPage = page;
-                currentPageEl.textContent = page;
-                
-                if (currentView === 'card') {
-                    // Hide all cards first
-                    staffCards.forEach(card => {
-                        card.style.display = 'none';
-                    });
-                    
-                    // Show only cards for current page
-                    const startIndex = (page - 1) * perPage;
-                    const endIndex = startIndex + perPage;
-                    
-                    filteredCards.slice(startIndex, endIndex).forEach(card => {
-                        card.style.display = '';
-                    });
-                } else {
-                    // Hide all rows first
-                    staffRows.forEach(row => {
-                        row.style.display = 'none';
-                    });
-                    
-                    // Show only rows for current page
-                    const startIndex = (page - 1) * perPage;
-                    const endIndex = startIndex + perPage;
-                    
-                    filteredRows.slice(startIndex, endIndex).forEach(row => {
-                        row.style.display = '';
-                    });
-                }
-                
-                // Update button states
-                const totalFiltered = currentView === 'card' ? filteredCards.length : filteredRows.length;
-                const totalPages = Math.ceil(totalFiltered / perPage);
-                prevButton.disabled = page <= 1;
-                nextButton.disabled = page >= totalPages;
-            }
-            
-            // Event listeners
-            searchInput.addEventListener('input', performSearch);
-            
-            filterCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', performSearch);
-            });
-            
-            cardViewBtn.addEventListener('click', () => toggleView('card'));
-            tableViewBtn.addEventListener('click', () => toggleView('table'));
-            
-            prevButton.addEventListener('click', () => {
-                if (currentPage > 1) {
-                    goToPage(currentPage - 1);
-                }
-            });
-            
-            nextButton.addEventListener('click', () => {
-                const totalFiltered = currentView === 'card' ? filteredCards.length : filteredRows.length;
-                const totalPages = Math.ceil(totalFiltered / perPage);
-                if (currentPage < totalPages) {
-                    goToPage(currentPage + 1);
-                }
-            });
-            
-            // Initialize
-            updatePagination();
-            goToPage(1);
-        });
-        </script>
-        <?php
-        return ob_get_clean();
     }
 } 
