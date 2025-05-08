@@ -71,6 +71,21 @@ Control Displayed Fields:
 ```
 Only displays Name, Address, and Phone for the specified department.
 
+**Searchable Staff Directory**
+
+Create a searchable staff directory with pagination:
+```
+[searchable_staff_directory]
+```
+
+Options:
+```
+[searchable_staff_directory per_page="10" show="name,title,department,email,phone,photo" default_view="table"]
+```
+- `per_page`: Number of staff members to show per page (default: 20)
+- `show`: Fields to display (default: name,title,department,email,phone,photo)
+- `default_view`: Initial view to show (card or table, default: card)
+
 == Frequently Asked Questions ==
 
 = How do I find my department IDs? =
@@ -87,7 +102,19 @@ If an employee is missing data for a field, the plugin will gracefully handle it
 
 = Can I style the output? =
 
-Yes! The plugin outputs with semantic class names that can be styled using CSS:
+Yes! The plugin outputs with semantic class names that can be styled using CSS:**Searchable Staff Directory**
+
+Create a searchable staff directory with pagination:
+```
+[searchable_staff_directory]
+```
+
+Options:
+```
+[searchable_staff_directory per_page="10" show="name,title,department,email,phone,photo"]
+```
+- `per_page`: Number of staff members to show per page (default: 20)
+- `show`: Fields to display (default: name,title,department,email,phone,photo)
 - `.staff-directory` - Container for the directory
 - `.staff-card` - Individual staff member card
 - `.staff-photo-container` - Photo wrapper

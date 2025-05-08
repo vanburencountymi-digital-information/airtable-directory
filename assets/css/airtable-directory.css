@@ -112,3 +112,235 @@
 .department-url a:hover {
     background-color: #3a7bc8;
 }
+
+/* Searchable directory styles */
+.searchable-staff-directory {
+    margin-bottom: 2em;
+}
+
+.search-container {
+    margin-bottom: 1.5em;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 5px;
+}
+
+.staff-search {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.search-filters {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.search-filters label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+}
+
+.pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.5em;
+    padding: 10px 0;
+    border-top: 1px solid #eee;
+}
+
+.pagination-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pagination-buttons button {
+    padding: 5px 10px;
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.pagination-buttons button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-info {
+    font-size: 14px;
+    color: #666;
+}
+
+.pagination-info {
+    font-size: 14px;
+    color: #666;
+}
+
+/* Directory control bar */
+.directory-control-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5em;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 5px;
+}
+
+.search-container {
+    flex: 1;
+    min-width: 250px;
+    margin-right: 20px;
+}
+
+.view-toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.view-toggle-btn {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: #f1f1f1;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.view-toggle-btn .dashicons {
+    margin-right: 5px;
+    font-size: 16px;
+}
+
+.view-toggle-btn:hover {
+    background: #e8e8e8;
+}
+
+.view-toggle-btn.active {
+    background: #007cba;
+    color: white;
+    border-color: #006ba1;
+}
+
+/* View containers */
+.card-view-container,
+.table-view-container {
+    display: none;
+}
+
+.card-view-container.active,
+.table-view-container.active {
+    display: block;
+}
+
+/* Table view styles */
+.staff-directory-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background: white;
+}
+
+.staff-directory-table th,
+.staff-directory-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.staff-directory-table th {
+    background: #f5f5f5;
+    font-weight: bold;
+    color: #333;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.staff-directory-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+.staff-directory-table .column-photo {
+    width: 60px;
+}
+
+.staff-photo-thumbnail {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.staff-photo-thumbnail.no-photo {
+    background-color: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #999;
+}
+
+/* Responsive table */
+@media screen and (max-width: 768px) {
+    .staff-directory-table thead {
+        display: none;
+    }
+    
+    .staff-directory-table, 
+    .staff-directory-table tbody, 
+    .staff-directory-table tr, 
+    .staff-directory-table td {
+        display: block;
+        width: 100%;
+    }
+    
+    .staff-directory-table tr {
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+    
+    .staff-directory-table td {
+        display: flex;
+        padding: 8px 10px;
+    }
+    
+    .staff-directory-table td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        width: 120px;
+        min-width: 120px;
+    }
+    
+    .staff-directory-table .column-photo {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .staff-photo-thumbnail {
+        width: 80px;
+        height: 80px;
+    }
+}
+
+/* Improve pagination controls for both views */
+.pagination-controls {
+    margin-top: 2em;
+}

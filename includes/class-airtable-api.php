@@ -20,6 +20,7 @@ class Airtable_Directory_API {
      * @return array
      */
     public function fetch_data($table, $query_params = array()) {
+        // Create a unique transient key for this query
         $transient_key = 'airtable_' . md5($table . serialize($query_params));
         
         // Check if we have cached data
@@ -31,38 +32,74 @@ class Airtable_Directory_API {
     
         $api_key = AIRTABLE_API_KEY;
         $base_id = AIRTABLE_BASE_ID;
-        $url = "https://api.airtable.com/v0/" . $base_id . "/" . urlencode($table);
-    
-        if (!empty($query_params)) {
-            $url .= '?' . http_build_query($query_params);
+        
+        // Initialize records array to store all records
+        $all_records = array();
+        
+        // Initialize offset for pagination
+        $offset = null;
+        
+        do {
+            // Add offset to query params if we have one
+            $current_params = $query_params;
+            if ($offset) {
+                $current_params['offset'] = $offset;
+            }
+            
+            $url = "https://api.airtable.com/v0/" . $base_id . "/" . urlencode($table);
+            
+            if (!empty($current_params)) {
+                $url .= '?' . http_build_query($current_params);
+            }
+            
+            // Log the URL for debugging (masking sensitive info)
+            error_log('Airtable API URL: ' . preg_replace('/Bearer\s+[a-zA-Z0-9]+/', 'Bearer XXXXX', $url));
+            
+            $args = array(
+                'headers' => array(
+                    'Authorization' => 'Bearer ' . $api_key,
+                    'Content-Type'  => 'application/json'
+                )
+            );
+            
+            $response = wp_remote_get($url, $args);
+            if (is_wp_error($response)) {
+                error_log('Airtable API Error: ' . $response->get_error_message());
+                return $all_records; // Return whatever we have so far
+            }
+            
+            $body = wp_remote_retrieve_body($response);
+            $data = json_decode($body, true);
+            
+            if (isset($data['records']) && is_array($data['records'])) {
+                // Add this page of records to our collection
+                $all_records = array_merge($all_records, $data['records']);
+                
+                // Log how many records we've fetched so far
+                error_log('Fetched ' . count($data['records']) . ' records from Airtable, total: ' . count($all_records));
+                
+                // Check if there are more records to fetch
+                $offset = isset($data['offset']) ? $data['offset'] : null;
+            } else {
+                $offset = null; // No more records or error
+            }
+            
+            // Small delay to prevent hitting API rate limits
+            if ($offset) {
+                usleep(200000); // 200ms delay
+            }
+            
+        } while ($offset); // Continue until no more offset is returned
+        
+        // Log the total number of records fetched
+        error_log('Total records fetched from ' . $table . ': ' . count($all_records));
+        
+        // Cache the data for 12 hours
+        if (!empty($all_records)) {
+            set_transient($transient_key, $all_records, 12 * HOUR_IN_SECONDS);
         }
-    
-        // Log the URL for debugging (masking sensitive info)
-        error_log('Airtable API URL: ' . preg_replace('/Bearer\s+[a-zA-Z0-9]+/', 'Bearer XXXXX', $url));
-    
-        $args = array(
-            'headers' => array(
-                'Authorization' => 'Bearer ' . $api_key,
-                'Content-Type'  => 'application/json'
-            )
-        );
-    
-        $response = wp_remote_get($url, $args);
-        if (is_wp_error($response)) {
-            error_log('Airtable API Error: ' . $response->get_error_message());
-            return [];
-        }
-    
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-    
-        if (isset($data['records'])) {
-            // Cache the data for 12 hours
-            set_transient($transient_key, $data['records'], 12 * HOUR_IN_SECONDS);
-            return $data['records'];
-        }
-    
-        return [];
+        
+        return $all_records;
     }
     
     /**

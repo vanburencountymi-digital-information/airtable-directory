@@ -35,6 +35,9 @@ class Airtable_Directory {
      * Enqueue plugin styles.
      */
     public function enqueue_styles() {
+        // Enqueue dashicons for view toggle buttons
+        wp_enqueue_style('dashicons');
+        
         wp_register_style(
             'airtable-directory-styles', 
             AIRTABLE_DIRECTORY_PLUGIN_URL . 'assets/css/airtable-directory.css',
