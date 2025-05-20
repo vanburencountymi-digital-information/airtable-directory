@@ -112,17 +112,21 @@ class Airtable_Directory_API {
         global $wpdb;
         
         if (empty($table)) {
-            // Clear all Airtable caches
+            // Clear all Airtable caches - ensure we're matching the correct pattern with "airtable_"
             $wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '_transient_airtable_%' OR option_name LIKE '_transient_timeout_airtable_%'");
+            // Force WordPress to update its internal cache
+            wp_cache_flush();
             error_log('Cleared all Airtable cache entries');
         } else {
             // Clear cache for specific table
             if (empty($query_params)) {
-                // Clear all caches for this table
+                // Clear all caches for this table - add the "airtable_" prefix to match the actual keys
+                $prefix = 'airtable_' . md5($table);
                 $wpdb->query($wpdb->prepare("DELETE FROM $wpdb->options WHERE (option_name LIKE %s OR option_name LIKE %s)", 
-                    '_transient_airtable_' . md5($table) . '%',
-                    '_transient_timeout_airtable_' . md5($table) . '%'
+                    '_transient_' . $prefix . '%',
+                    '_transient_timeout_' . $prefix . '%'
                 ));
+                wp_cache_flush();
                 error_log('Cleared cache for table: ' . $table);
             } else {
                 // Clear cache for specific query
