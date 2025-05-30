@@ -1,27 +1,36 @@
 === Airtable Directory ===
 Contributors: yourname
-Tags: airtable, directory, staff, shortcode, custom directory
+Tags: airtable, directory, staff, shortcode, custom directory, department pages, employee profiles
 Requires at least: 5.0
 Tested up to: 6.4
 Requires PHP: 7.4
-Stable tag: 2.1
+Stable tag: 2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-A custom WordPress plugin to display staff directories using data from Airtable. Supports filtering by department and customizable field visibility.
+A comprehensive WordPress plugin to display staff directories using data from Airtable. Features department pages, employee profiles, hierarchy support, and customizable field visibility.
 
 == Description ==
 
-Airtable Directory is a lightweight WordPress plugin that pulls employee data from an Airtable base and displays it as a directory using shortcodes.
+Airtable Directory is a powerful WordPress plugin that pulls employee and department data from an Airtable base and displays it both as shortcodes and dedicated directory pages with clean URLs.
 
-**Features:**
+**Key Features:**
 - Fetches employee and department data from Airtable
-- Displays staff members in a responsive card layout
+- **NEW: Directory Pages** - Automatic `/directory/` pages with department and employee profiles
+- **NEW: URL-friendly slugs** - Clean URLs like `/directory/human-resources/` and `/directory/john-smith/`
+- **NEW: Department hierarchy support** - Parent/child department relationships with nested staff displays
+- Displays staff members in responsive card and table layouts
 - Supports filtering by department using department IDs
 - Allows custom selection of visible fields (name, title, department, email, phone, photo)
-- Includes department details display with separate shortcode
+- Includes searchable staff directory with pagination
 - Caching system for improved performance
-- Admin interface for clearing the cache
+- Admin interface for cache management and URL control
+
+**Directory Structure:**
+- **Main Directory:** `/directory/` - Browse all departments
+- **Department Pages:** `/directory/{department-name}/` - View department info, staff, and sub-departments  
+- **Employee Pages:** `/directory/{employee-name}/` - Individual employee profiles
+- **Hierarchy Display:** Parent departments automatically show child department sections
 
 == Installation ==
 
@@ -32,8 +41,31 @@ Airtable Directory is a lightweight WordPress plugin that pulls employee data fr
    define('AIRTABLE_API_KEY', 'your_airtable_api_key');
    define('AIRTABLE_BASE_ID', 'your_airtable_base_id');
    ```
-4. Use the shortcodes `[staff_directory]` and `[department_details]` to display the content.
-5. You can clear the cache through Settings > Airtable Directory in the admin dashboard.
+4. **Important:** After activation, go to Settings > Airtable Directory and click "Refresh URL Rules" to enable directory pages.
+5. Use the shortcodes or visit `/directory/` to access the new directory pages.
+
+== Directory Pages ==
+
+**Main Directory Page**
+Visit `/directory/` to see all departments organized by hierarchy. Each department card shows:
+- Department name (linked to department page)
+- Staff count
+- Child department count
+- List of sub-departments
+
+**Department Pages**
+Each department gets its own page at `/directory/{department-slug}/` showing:
+- Department contact information and details
+- Staff members in that department
+- Child departments with their own staff tables
+- Breadcrumb navigation
+
+**Employee Pages**
+Each employee gets a profile page at `/directory/{employee-slug}/` featuring:
+- Large profile photo
+- Complete contact information
+- Job title and department
+- Professional details
 
 == Shortcodes ==
 
@@ -86,42 +118,85 @@ Options:
 - `show`: Fields to display (default: name,title,department,email,phone,photo)
 - `default_view`: Initial view to show (card or table, default: card)
 
+== Department Hierarchy ==
+
+The plugin automatically handles complex department structures:
+
+- **Parent Departments:** Show overview, staff, and list of child departments
+- **Child Departments:** Each gets its own section with department details and staff table
+- **Multi-level Support:** Handles multiple levels of department nesting
+- **Automatic Organization:** Department cards on main directory page group by parent/child relationships
+
+Example hierarchy display on a parent department page:
+1. Parent department details and contact info
+2. Staff members directly in parent department
+3. Child Department 1 details and staff table
+4. Child Department 2 details and staff table
+5. (Additional child departments as needed)
+
+== Admin Management ==
+
+**Settings Page: Settings > Airtable Directory**
+
+- **Cache Management:** Clear data caches for specific tables or all data
+- **Directory Cache:** Clear URL slug mappings and hierarchy caches  
+- **URL Management:** Refresh rewrite rules if directory URLs aren't working
+- **Usage Information:** View shortcode examples and directory URL structure
+
 == Frequently Asked Questions ==
 
 = How do I find my department IDs? =
 
 You can find the record IDs in your Airtable interface. Open your base, navigate to the Departments table, and the ID is visible in the URL when you select a record, or you can use the Airtable API documentation to see all record IDs.
 
+= How do department hierarchies work? =
+
+In your Airtable Departments table, ensure you have a "Parent Department" field that links to other department records. The plugin automatically detects these relationships and displays child departments as separate sections on parent department pages.
+
+= What if directory URLs aren't working? =
+
+Go to Settings > Airtable Directory and click "Refresh URL Rules." This flushes WordPress rewrite rules and should resolve URL issues. If problems persist, deactivate and reactivate the plugin.
+
 = How do I add employee photos? =
 
-Ensure your Airtable Staff table has a Photo field that stores attachments. The plugin will automatically pull the image URL.
+Ensure your Airtable Staff table has a Photo field that stores attachments. The plugin will automatically pull the image URL and display photos in cards, tables, and employee profile pages.
+
+= Can I customize the directory page styling? =
+
+Yes! The plugin outputs semantic CSS classes that can be styled. Key classes include:
+- `.airtable-directory-page` - Main container for directory pages
+- `.directory-index` - Main directory page
+- `.directory-department-page` - Department pages  
+- `.directory-employee-page` - Employee profile pages
+- `.department-card` - Department cards on index page
+- `.employee-profile` - Employee profile container
 
 = What happens if a field is missing? =
 
-If an employee is missing data for a field, the plugin will gracefully handle it and not display an empty field.
+If an employee or department is missing data for a field, the plugin will gracefully handle it and not display empty fields.
 
-= Can I style the output? =
+= How do URL slugs get generated? =
 
-Yes! The plugin outputs with semantic class names that can be styled using CSS:**Searchable Staff Directory**
-
-Create a searchable staff directory with pagination:
-```
-[searchable_staff_directory]
-```
-
-Options:
-```
-[searchable_staff_directory per_page="10" show="name,title,department,email,phone,photo"]
-```
-- `per_page`: Number of staff members to show per page (default: 20)
-- `show`: Fields to display (default: name,title,department,email,phone,photo)
-- `.staff-directory` - Container for the directory
-- `.staff-card` - Individual staff member card
-- `.staff-photo-container` - Photo wrapper
-- `.staff-info` - Text information
-- `.department-details` - Department information container
+The plugin automatically converts department and employee names into URL-friendly slugs by:
+- Converting to lowercase
+- Replacing spaces and special characters with hyphens
+- Removing duplicate hyphens
+- Handling duplicate names by appending numbers
 
 == Changelog ==
+
+= 2.2 =
+* **Major Feature:** Added complete directory page system with clean URLs
+* **NEW:** Department pages showing staff and child departments with hierarchy support
+* **NEW:** Individual employee profile pages with detailed information
+* **NEW:** Main directory index page organizing all departments
+* **NEW:** Automatic URL slug generation for departments and employees
+* **NEW:** Breadcrumb navigation on directory pages
+* **NEW:** Enhanced admin interface with directory cache management and URL controls
+* Extended API class with department hierarchy and staff lookup methods
+* Added comprehensive CSS styling for directory pages
+* Improved cache management for directory-specific data
+* Updated documentation with directory features
 
 = 2.1 =
 * Refactored plugin into a modular, class-based structure
@@ -143,5 +218,10 @@ Options:
 
 == Upgrade Notice ==
 
+= 2.2 =
+Major update with new directory page system! After upgrading, go to Settings > Airtable Directory and click "Refresh URL Rules" to enable the new `/directory/` pages. All existing shortcodes remain fully compatible.
+
 = 2.1 =
 Important update with improved architecture and bug fixes. Compatible with existing shortcodes.
+
+---

@@ -3,7 +3,7 @@
 Plugin Name: Airtable Directory
 Plugin URI: https://yourwebsite.com
 Description: Custom staff directory pulling data from Airtable using separate Departments and Staff tables.
-Version: 2.1
+Version: 2.2
 Author: Your Name
 Author URI: https://yourwebsite.com
 License: GPL2
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('AIRTABLE_DIRECTORY_VERSION', '2.1');
+define('AIRTABLE_DIRECTORY_VERSION', '2.2');
 define('AIRTABLE_DIRECTORY_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AIRTABLE_DIRECTORY_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -34,6 +34,7 @@ require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-airtable-api.php';
 require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-airtable-directory.php';
 require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-shortcodes.php';
 require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-admin.php';
+require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-directory-routes.php';
 
 // Initialize the plugin
 function airtable_directory_init() {
@@ -46,6 +47,9 @@ function airtable_directory_init() {
     // Initialize shortcodes
     $shortcodes = new Airtable_Directory_Shortcodes($api);
     
+    // Initialize directory routes
+    $routes = new Airtable_Directory_Routes($api);
+    
     // Initialize admin (only if in admin area)
     if (is_admin()) {
         $admin = new Airtable_Directory_Admin($api);
@@ -53,3 +57,32 @@ function airtable_directory_init() {
 }
 add_action('plugins_loaded', 'airtable_directory_init');
 
+// Plugin activation hook
+register_activation_hook(__FILE__, 'airtable_directory_activation');
+
+/**
+ * Plugin activation callback
+ */
+function airtable_directory_activation() {
+    // Initialize API and routes for activation
+    $api = new Airtable_Directory_API();
+    $routes = new Airtable_Directory_Routes($api);
+    
+    // Flush rewrite rules
+    $routes->flush_rewrite_rules();
+    
+    error_log('Airtable Directory plugin activated');
+}
+
+// Plugin deactivation hook
+register_deactivation_hook(__FILE__, 'airtable_directory_deactivation');
+
+/**
+ * Plugin deactivation callback
+ */
+function airtable_directory_deactivation() {
+    // Clean up rewrite rules
+    flush_rewrite_rules();
+    
+    error_log('Airtable Directory plugin deactivated');
+}

@@ -103,6 +103,184 @@ class Airtable_Directory_API {
     }
     
     /**
+     * Get department by Department ID (number)
+     *
+     * @param string|int $department_id Department ID number
+     * @return array|false Department data or false if not found
+     */
+    public function get_department_by_id($department_id) {
+        $query_params = array(
+            'filterByFormula' => "{Department ID} = " . intval($department_id),
+            'maxRecords' => 1
+        );
+        
+        $departments = $this->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $query_params);
+        
+        return !empty($departments) ? $departments[0] : false;
+    }
+    
+    /**
+     * Get employee by Employee ID (number)
+     *
+     * @param string|int $employee_id Employee ID number
+     * @return array|false Employee data or false if not found
+     */
+    public function get_employee_by_id($employee_id) {
+        $query_params = array(
+            'filterByFormula' => "{Employee ID} = " . intval($employee_id),
+            'maxRecords' => 1
+        );
+        
+        $employees = $this->fetch_data(AIRTABLE_STAFF_TABLE, $query_params);
+        
+        return !empty($employees) ? $employees[0] : false;
+    }
+    
+    /**
+     * Get child departments for a parent department using Parent ID
+     *
+     * @param string|int $parent_id Parent department ID number
+     * @return array Array of child department records
+     */
+    public function get_child_departments($parent_id) {
+        $query_params = array(
+            'filterByFormula' => "{Parent ID} = " . intval($parent_id)
+        );
+        
+        return $this->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $query_params);
+    }
+    
+    /**
+     * Get all parent departments (departments with no Parent ID)
+     *
+     * @return array Array of parent department records
+     */
+    public function get_parent_departments() {
+        $query_params = array(
+            'filterByFormula' => "{Parent ID} = BLANK()"
+        );
+        
+        return $this->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $query_params);
+    }
+    
+    /**
+     * Get staff count for a department using Employee IDs array or Staff field
+     *
+     * @param string|int $department_id Department ID number
+     * @return int Number of staff members
+     */
+    public function get_department_staff_count($department_id) {
+        $department = $this->get_department_by_id($department_id);
+        
+        if (!$department) {
+            return 0;
+        }
+        
+        $fields = isset($department['fields']) ? $department['fields'] : array();
+        
+        // Check for Employee IDs array first
+        if (isset($fields['Employee IDs']) && is_array($fields['Employee IDs'])) {
+            return count($fields['Employee IDs']);
+        }
+        
+        // Check for Staff field (comma-separated string)
+        if (isset($fields['Staff']) && !empty($fields['Staff'])) {
+            $staff_ids = explode(',', $fields['Staff']);
+            return count(array_filter(array_map('trim', $staff_ids)));
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * Get staff members by department using Employee IDs array or Staff field
+     *
+     * @param string|int $department_id Department ID number
+     * @return array Array of staff records
+     */
+    public function get_staff_by_department($department_id) {
+        // First, get the department to find employee IDs
+        $department = $this->get_department_by_id($department_id);
+        
+        if (!$department) {
+            error_log("Department not found for ID: " . $department_id);
+            return array();
+        }
+        
+        $fields = isset($department['fields']) ? $department['fields'] : array();
+        $employee_ids = array();
+        
+        // Check for Employee IDs array first
+        if (isset($fields['Employee IDs']) && is_array($fields['Employee IDs'])) {
+            $employee_ids = $fields['Employee IDs'];
+            error_log("Found Employee IDs array: " . print_r($employee_ids, true));
+        }
+        // Check for Staff field (comma-separated string)
+        elseif (isset($fields['Staff']) && !empty($fields['Staff'])) {
+            $staff_string = $fields['Staff'];
+            $employee_ids = array_filter(array_map('trim', explode(',', $staff_string)));
+            error_log("Found Staff field: " . $staff_string . " -> " . print_r($employee_ids, true));
+        }
+        
+        if (empty($employee_ids)) {
+            error_log("No employee IDs found for department " . $department_id);
+            return array();
+        }
+        
+        // Build filter formula for staff members using Employee ID numbers
+        $filter_clauses = array();
+        foreach ($employee_ids as $emp_id) {
+            $filter_clauses[] = "{Employee ID} = " . intval($emp_id);
+        }
+        $filter_formula = "OR(" . implode(',', $filter_clauses) . ")";
+        
+        error_log("Staff lookup filter formula: " . $filter_formula);
+        
+        $staff_query_params = array(
+            'filterByFormula' => $filter_formula
+        );
+        
+        $staff_results = $this->fetch_data(AIRTABLE_STAFF_TABLE, $staff_query_params);
+        error_log("Staff lookup returned " . count($staff_results) . " results");
+        
+        return $staff_results;
+    }
+    
+    /**
+     * Get department by record ID (for internal use)
+     *
+     * @param string $record_id Airtable record ID
+     * @return array|false Department data or false if not found
+     */
+    public function get_department_by_record_id($record_id) {
+        $query_params = array(
+            'filterByFormula' => "RECORD_ID() = '$record_id'",
+            'maxRecords' => 1
+        );
+        
+        $departments = $this->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $query_params);
+        
+        return !empty($departments) ? $departments[0] : false;
+    }
+    
+    /**
+     * Get employee by record ID (for internal use)
+     *
+     * @param string $record_id Airtable record ID
+     * @return array|false Employee data or false if not found
+     */
+    public function get_employee_by_record_id($record_id) {
+        $query_params = array(
+            'filterByFormula' => "RECORD_ID() = '$record_id'",
+            'maxRecords' => 1
+        );
+        
+        $employees = $this->fetch_data(AIRTABLE_STAFF_TABLE, $query_params);
+        
+        return !empty($employees) ? $employees[0] : false;
+    }
+    
+    /**
      * Clear Airtable cache.
      * 
      * @param string $table Optional. Table name to clear cache for. If empty, clears all Airtable caches.
@@ -135,5 +313,19 @@ class Airtable_Directory_API {
                 error_log('Cleared cache for specific query: ' . $transient_key);
             }
         }
+    }
+    
+    /**
+     * Clear directory-specific caches (slug mappings, etc.)
+     */
+    public function clear_directory_cache() {
+        // Clear slug mapping caches
+        delete_transient('airtable_department_slugs');
+        delete_transient('airtable_employee_slugs');
+        
+        // Clear general table caches
+        $this->clear_cache();
+        
+        error_log('Cleared all directory-related caches');
     }
 } 
