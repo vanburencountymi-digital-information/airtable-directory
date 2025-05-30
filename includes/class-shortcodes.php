@@ -160,10 +160,10 @@ class Airtable_Directory_Shortcodes {
                     $output .= "$dept<br>";
                 }
                 if (in_array('email', $visible_fields) && $email !== 'No Email') {
-                    $output .= "Email: $email<br>";
+                    $output .= "<a href='mailto:$email'>$email</a><br>";
                 }
                 if (in_array('phone', $visible_fields) && $phone !== 'No Phone') {
-                    $output .= "Phone: $phone<br>";
+                    $output .= "<a href='tel:" . preg_replace('/[^0-9+]/', '', $phone) . "'>$phone</a><br>";
                 }
                 $output .= "</div></div>";
             }
@@ -301,11 +301,11 @@ class Airtable_Directory_Shortcodes {
             
             $output .= '<div class="department-contact">';
             if (in_array('phone', $visible_fields) && $phone !== 'No phone available') {
-                $output .= '<p><strong>Phone:</strong> ' . $phone . '</p>';
+                $output .= '<p><strong>Phone:</strong> <a href="tel:' . preg_replace('/[^0-9+]/', '', $phone) . '">' . $phone . '</a></p>';
             }
             
             if (in_array('fax', $visible_fields) && $fax !== 'No fax available') {
-                $output .= '<p><strong>Fax:</strong> ' . $fax . '</p>';
+                $output .= '<p><strong>Fax:</strong> <a href="tel:' . preg_replace('/[^0-9+]/', '', $fax) . '">' . $fax . '</a></p>';
             }
 
             if (in_array('hours', $visible_fields) && $hours !== 'No hours listed') {
@@ -446,10 +446,10 @@ class Airtable_Directory_Shortcodes {
                     $output .= "$dept<br>";
                 }
                 if (in_array('email', $visible_fields) && $email !== 'No Email') {
-                    $output .= "Email: $email<br>";
+                    $output .= "Email: <a href='mailto:$email'>$email</a><br>";
                 }
                 if (in_array('phone', $visible_fields) && $phone !== 'No Phone') {
-                    $output .= "Phone: $phone<br>";
+                    $output .= "Phone: <a href='tel:" . preg_replace('/[^0-9+]/', '', $phone) . "'>$phone</a><br>";
                 }
                 $output .= "</div></div>";
             }
@@ -540,11 +540,15 @@ class Airtable_Directory_Shortcodes {
                 }
                 
                 if (in_array('email', $visible_fields)) {
-                    $output .= "<td class='column-email' data-label='Email'>" . ($email !== 'No Email' ? $email : '') . "</td>";
+                    $output .= "<td class='column-email' data-label='Email'>" . 
+                        ($email !== 'No Email' ? "<a href='mailto:$email'>$email</a>" : '') . 
+                        "</td>";
                 }
                 
                 if (in_array('phone', $visible_fields)) {
-                    $output .= "<td class='column-phone' data-label='Phone'>" . ($phone !== 'No Phone' ? $phone : '') . "</td>";
+                    $output .= "<td class='column-phone' data-label='Phone'>" . 
+                        ($phone !== 'No Phone' ? "<a href='tel:" . preg_replace('/[^0-9+]/', '', $phone) . "'>$phone</a>" : '') . 
+                        "</td>";
                 }
                 
                 $output .= "</tr>";
