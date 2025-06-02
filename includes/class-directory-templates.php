@@ -310,171 +310,200 @@ class Airtable_Directory_Templates {
             return;
         }
 
-        // Default view is table
         $directory_id = 'staff-directory-' . uniqid();
 
-        ?>
-        <div class="staff-directory-toggle-container" id="<?php echo $directory_id; ?>">
-            <div class="directory-control-bar">
-                <span>View: </span>
-                <button class="view-toggle-btn card-view-btn" data-view="card" title="Card View">
-                    <span class="dashicons dashicons-grid-view"></span> Cards
-                </button>
-                <button class="view-toggle-btn table-view-btn active" data-view="table" title="Table View">
-                    <span class="dashicons dashicons-list-view"></span> Table
-                </button>
-            </div>
+        // Get display fields from settings
+        $display_fields = get_option('airtable_directory_display_fields', array(
+            'photo' => 1,
+            'name' => 1,
+            'title' => 1,
+            'phone' => 1,
+            'email' => 1,
+            'department' => 1,
+        ));
+?>
+<div class="staff-directory-toggle-container" id="<?php echo $directory_id; ?>">
+    <div class="directory-control-bar">
+        <span>View: </span>
+        <button class="view-toggle-btn card-view-btn" data-view="card" title="Card View">
+            <span class="dashicons dashicons-grid-view"></span> Cards
+        </button>
+        <button class="view-toggle-btn table-view-btn active" data-view="table" title="Table View">
+            <span class="dashicons dashicons-list-view"></span> Table
+        </button>
+    </div>
 
-            <!-- Card View -->
-            <div class="card-view-container" style="display:none;">
-                <div class="staff-directory card-layout">
-                    <?php foreach ($staff_members as $employee): 
-                        $fields = isset($employee['fields']) ? $employee['fields'] : array();
-                        $name = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
-                        $title = isset($fields['Title']) ? esc_html($fields['Title']) : '';
-                        $dept = isset($fields['Department']) ? esc_html($fields['Department']) : '';
+    <!-- Card View -->
+    <div class="card-view-container" style="display:none;">
+        <div class="staff-directory card-layout">
+            <?php foreach ($staff_members as $employee): 
+                $fields = isset($employee['fields']) ? $employee['fields'] : array();
+                $name = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
+                $title = isset($fields['Title']) ? esc_html($fields['Title']) : '';
+                $dept = isset($fields['Department']) ? esc_html($fields['Department']) : '';
+                $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
+                $email = isset($fields['Email']) ? esc_html($fields['Email']) : '';
+                $emp_slug = $this->routes->generate_slug($name);
+                $emp_url = home_url('/directory/' . $emp_slug . '/');
 
-                        // Generate employee URL
-                        $emp_slug = $this->routes->generate_slug($name);
-                        $emp_url = home_url('/directory/' . $emp_slug . '/');
-
-                        // Photo extraction (reuse logic)
-                        $photo_url = '';
-                        if (isset($fields['Photo'])) {
-                            if (is_array($fields['Photo']) && !empty($fields['Photo'])) {
-                                if (isset($fields['Photo'][0]['url'])) {
-                                    $photo_url = esc_url($fields['Photo'][0]['url']);
-                                } elseif (isset($fields['Photo'][0]['thumbnails']['large']['url'])) {
-                                    $photo_url = esc_url($fields['Photo'][0]['thumbnails']['large']['url']);
-                                } elseif (isset($fields['Photo']['url'])) {
-                                    $photo_url = esc_url($fields['Photo']['url']);
-                                } elseif (is_string($fields['Photo'][0])) {
-                                    $photo_url = esc_url($fields['Photo'][0]);
-                                }
-                            } elseif (is_string($fields['Photo'])) {
-                                $photo_url = esc_url($fields['Photo']);
-                            }
+                // Photo extraction (reuse logic)
+                $photo_url = '';
+                if (isset($fields['Photo'])) {
+                    if (is_array($fields['Photo']) && !empty($fields['Photo'])) {
+                        if (isset($fields['Photo'][0]['url'])) {
+                            $photo_url = esc_url($fields['Photo'][0]['url']);
+                        } elseif (isset($fields['Photo'][0]['thumbnails']['large']['url'])) {
+                            $photo_url = esc_url($fields['Photo'][0]['thumbnails']['large']['url']);
+                        } elseif (isset($fields['Photo']['url'])) {
+                            $photo_url = esc_url($fields['Photo']['url']);
+                        } elseif (is_string($fields['Photo'][0])) {
+                            $photo_url = esc_url($fields['Photo'][0]);
                         }
-                    ?>
-                    <div class="staff-card">
-                        <div class="staff-photo-container">
-                            <?php if (!empty($photo_url)): ?>
-                                <img src="<?php echo $photo_url; ?>" alt="Photo of <?php echo $name; ?>" class="staff-photo">
-                            <?php else: ?>
-                                <div class="staff-photo no-photo"><span>No Photo</span></div>
-                            <?php endif; ?>
-                        </div>
-                        <div class="staff-info">
-                            <strong><a href="<?php echo esc_url($emp_url); ?>"><?php echo $name; ?></a></strong><br>
-                            <?php if (!empty($title)): ?>
-                                <span class="staff-title"><?php echo $title; ?></span><br>
-                            <?php endif; ?>
-                            <?php if (!empty($dept)): ?>
-                                <span class="staff-department"><?php echo $dept; ?></span><br>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
+                    } elseif (is_string($fields['Photo'])) {
+                        $photo_url = esc_url($fields['Photo']);
+                    }
+                }
+            ?>
+            <div class="staff-card">
+                <?php if (!empty($display_fields['photo'])): ?>
+                <div class="staff-photo-container">
+                    <?php if (!empty($photo_url)): ?>
+                        <img src="<?php echo $photo_url; ?>" alt="Photo of <?php echo $name; ?>" class="staff-photo">
+                    <?php else: ?>
+                        <div class="staff-photo no-photo"><span>No Photo</span></div>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+                <div class="staff-info">
+                    <?php if (!empty($display_fields['name'])): ?>
+                        <strong><a href="<?php echo esc_url($emp_url); ?>"><?php echo $name; ?></a></strong><br>
+                    <?php endif; ?>
+                    <?php if (!empty($display_fields['title']) && !empty($title)): ?>
+                        <span class="staff-title"><?php echo $title; ?></span><br>
+                    <?php endif; ?>
+                    <?php if (!empty($display_fields['department']) && !empty($dept)): ?>
+                        <span class="staff-department"><?php echo $dept; ?></span><br>
+                    <?php endif; ?>
+                    <?php if (!empty($display_fields['phone']) && !empty($phone)): ?>
+                        <span class="staff-phone"><a href="tel:<?php echo preg_replace('/[^0-9+]/', '', $phone); ?>"><?php echo $phone; ?></a></span><br>
+                    <?php endif; ?>
+                    <?php if (!empty($display_fields['email']) && !empty($email)): ?>
+                        <span class="staff-email"><a href="mailto:<?php echo antispambot($email); ?>"><?php echo antispambot($email); ?></a></span><br>
+                    <?php endif; ?>
                 </div>
             </div>
-
-            <!-- Table View -->
-            <div class="table-view-container" style="display:block;">
-                <table class="staff-directory-table">
-                    <thead>
-                        <tr>
-                            <th class="column-photo">Photo</th>
-                            <th class="column-name">Name</th>
-                            <th class="column-title">Title</th>
-                            <th class="column-phone">Phone</th>
-                            <th class="column-email">Email</th>
-                            <th class="column-department">Department</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($staff_members as $employee): 
-                            $fields = isset($employee['fields']) ? $employee['fields'] : array();
-                            $name = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
-                            $title = isset($fields['Title']) ? esc_html($fields['Title']) : '';
-                            $dept = isset($fields['Department']) ? esc_html($fields['Department']) : '';
-                            $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
-                            $email = isset($fields['Email']) ? esc_html($fields['Email']) : '';
-                            $emp_slug = $this->routes->generate_slug($name);
-                            $emp_url = home_url('/directory/' . $emp_slug . '/');
-
-                            // Photo extraction (reuse logic)
-                            $photo_url = '';
-                            if (isset($fields['Photo'])) {
-                                if (is_array($fields['Photo']) && !empty($fields['Photo'])) {
-                                    if (isset($fields['Photo'][0]['url'])) {
-                                        $photo_url = esc_url($fields['Photo'][0]['url']);
-                                    } elseif (isset($fields['Photo'][0]['thumbnails']['large']['url'])) {
-                                        $photo_url = esc_url($fields['Photo'][0]['thumbnails']['large']['url']);
-                                    } elseif (isset($fields['Photo']['url'])) {
-                                        $photo_url = esc_url($fields['Photo']['url']);
-                                    } elseif (is_string($fields['Photo'][0])) {
-                                        $photo_url = esc_url($fields['Photo'][0]);
-                                    }
-                                } elseif (is_string($fields['Photo'])) {
-                                    $photo_url = esc_url($fields['Photo']);
-                                }
-                            }
-
-                            // --- NEW: Make phone and email clickable ---
-                            $phone_link = '';
-                            if (!empty($phone)) {
-                                $tel = preg_replace('/[^0-9+]/', '', $phone);
-                                $phone_link = '<a href="tel:' . esc_attr($tel) . '">' . $phone . '</a>';
-                            }
-
-                            $email_link = '';
-                            if (!empty($email)) {
-                                $email_link = '<a href="mailto:' . antispambot($email) . '">' . antispambot($email) . '</a>';
-                            }
-                        ?>
-                        <tr>
-                            <td class="column-photo">
-                                <?php if (!empty($photo_url)): ?>
-                                    <img src="<?php echo $photo_url; ?>" alt="Photo of <?php echo $name; ?>" class="staff-photo-thumbnail">
-                                <?php else: ?>
-                                    <div class="staff-photo-thumbnail no-photo"><span>No Photo</span></div>
-                                <?php endif; ?>
-                            </td>
-                            <td class="column-name"><a href="<?php echo esc_url($emp_url); ?>"><?php echo $name; ?></a></td>
-                            <td class="column-title"><?php echo $title; ?></td>
-                            <td class="column-phone"><?php echo $phone_link ?: $phone; ?></td>
-                            <td class="column-email"><?php echo $email_link ?: $email; ?></td>
-                            <td class="column-department"><?php echo $dept; ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+            <?php endforeach; ?>
         </div>
-        <script>
-        // Simple toggle logic (can be moved to a JS file)
-        (function(){
-            var container = document.getElementById('<?php echo $directory_id; ?>');
-            if (!container) return;
-            var cardBtn = container.querySelector('.card-view-btn');
-            var tableBtn = container.querySelector('.table-view-btn');
-            var cardView = container.querySelector('.card-view-container');
-            var tableView = container.querySelector('.table-view-container');
-            cardBtn.addEventListener('click', function() {
-                cardBtn.classList.add('active');
-                tableBtn.classList.remove('active');
-                cardView.style.display = 'block';
-                tableView.style.display = 'none';
-            });
-            tableBtn.addEventListener('click', function() {
-                tableBtn.classList.add('active');
-                cardBtn.classList.remove('active');
-                tableView.style.display = 'block';
-                cardView.style.display = 'none';
-            });
-        })();
-        </script>
-        <?php
+    </div>
+
+    <!-- Table View -->
+    <div class="table-view-container" style="display:block;">
+        <table class="staff-directory-table">
+            <thead>
+                <tr>
+                    <?php if (!empty($display_fields['photo'])): ?><th class="column-photo">Photo</th><?php endif; ?>
+                    <?php if (!empty($display_fields['name'])): ?><th class="column-name">Name</th><?php endif; ?>
+                    <?php if (!empty($display_fields['title'])): ?><th class="column-title">Title</th><?php endif; ?>
+                    <?php if (!empty($display_fields['phone'])): ?><th class="column-phone">Phone</th><?php endif; ?>
+                    <?php if (!empty($display_fields['email'])): ?><th class="column-email">Email</th><?php endif; ?>
+                    <?php if (!empty($display_fields['department'])): ?><th class="column-department">Department</th><?php endif; ?>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($staff_members as $employee): 
+                    $fields = isset($employee['fields']) ? $employee['fields'] : array();
+                    $name = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
+                    $title = isset($fields['Title']) ? esc_html($fields['Title']) : '';
+                    $dept = isset($fields['Department']) ? esc_html($fields['Department']) : '';
+                    $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
+                    $email = isset($fields['Email']) ? esc_html($fields['Email']) : '';
+                    $emp_slug = $this->routes->generate_slug($name);
+                    $emp_url = home_url('/directory/' . $emp_slug . '/');
+
+                    // Photo extraction (reuse logic)
+                    $photo_url = '';
+                    if (isset($fields['Photo'])) {
+                        if (is_array($fields['Photo']) && !empty($fields['Photo'])) {
+                            if (isset($fields['Photo'][0]['url'])) {
+                                $photo_url = esc_url($fields['Photo'][0]['url']);
+                            } elseif (isset($fields['Photo'][0]['thumbnails']['large']['url'])) {
+                                $photo_url = esc_url($fields['Photo'][0]['thumbnails']['large']['url']);
+                            } elseif (isset($fields['Photo']['url'])) {
+                                $photo_url = esc_url($fields['Photo']['url']);
+                            } elseif (is_string($fields['Photo'][0])) {
+                                $photo_url = esc_url($fields['Photo'][0]);
+                            }
+                        } elseif (is_string($fields['Photo'])) {
+                            $photo_url = esc_url($fields['Photo']);
+                        }
+                    }
+
+                    $phone_link = '';
+                    if (!empty($phone)) {
+                        $tel = preg_replace('/[^0-9+]/', '', $phone);
+                        $phone_link = '<a href="tel:' . esc_attr($tel) . '">' . $phone . '</a>';
+                    }
+
+                    $email_link = '';
+                    if (!empty($email)) {
+                        $email_link = '<a href="mailto:' . antispambot($email) . '">' . antispambot($email) . '</a>';
+                    }
+                ?>
+                <tr>
+                    <?php if (!empty($display_fields['photo'])): ?>
+                        <td class="column-photo">
+                            <?php if (!empty($photo_url)): ?>
+                                <img src="<?php echo $photo_url; ?>" alt="Photo of <?php echo $name; ?>" class="staff-photo-thumbnail">
+                            <?php else: ?>
+                                <div class="staff-photo-thumbnail no-photo"><span>No Photo</span></div>
+                            <?php endif; ?>
+                        </td>
+                    <?php endif; ?>
+                    <?php if (!empty($display_fields['name'])): ?>
+                        <td class="column-name"><a href="<?php echo esc_url($emp_url); ?>"><?php echo $name; ?></a></td>
+                    <?php endif; ?>
+                    <?php if (!empty($display_fields['title'])): ?>
+                        <td class="column-title"><?php echo $title; ?></td>
+                    <?php endif; ?>
+                    <?php if (!empty($display_fields['phone'])): ?>
+                        <td class="column-phone"><?php echo $phone_link ?: $phone; ?></td>
+                    <?php endif; ?>
+                    <?php if (!empty($display_fields['email'])): ?>
+                        <td class="column-email"><?php echo $email_link ?: $email; ?></td>
+                    <?php endif; ?>
+                    <?php if (!empty($display_fields['department'])): ?>
+                        <td class="column-department"><?php echo $dept; ?></td>
+                    <?php endif; ?>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+// Simple toggle logic (can be moved to a JS file)
+(function(){
+    var container = document.getElementById('<?php echo $directory_id; ?>');
+    if (!container) return;
+    var cardBtn = container.querySelector('.card-view-btn');
+    var tableBtn = container.querySelector('.table-view-btn');
+    var cardView = container.querySelector('.card-view-container');
+    var tableView = container.querySelector('.table-view-container');
+    cardBtn.addEventListener('click', function() {
+        cardBtn.classList.add('active');
+        tableBtn.classList.remove('active');
+        cardView.style.display = 'block';
+        tableView.style.display = 'none';
+    });
+    tableBtn.addEventListener('click', function() {
+        tableBtn.classList.add('active');
+        cardBtn.classList.remove('active');
+        tableView.style.display = 'block';
+        cardView.style.display = 'none';
+    });
+})();
+</script>
+<?php
     }
     
     /**
