@@ -386,6 +386,8 @@ class Airtable_Directory_Templates {
                             <th class="column-photo">Photo</th>
                             <th class="column-name">Name</th>
                             <th class="column-title">Title</th>
+                            <th class="column-phone">Phone</th>
+                            <th class="column-email">Email</th>
                             <th class="column-department">Department</th>
                         </tr>
                     </thead>
@@ -395,7 +397,8 @@ class Airtable_Directory_Templates {
                             $name = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
                             $title = isset($fields['Title']) ? esc_html($fields['Title']) : '';
                             $dept = isset($fields['Department']) ? esc_html($fields['Department']) : '';
-
+                            $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
+                            $email = isset($fields['Email']) ? esc_html($fields['Email']) : '';
                             $emp_slug = $this->routes->generate_slug($name);
                             $emp_url = home_url('/directory/' . $emp_slug . '/');
 
@@ -416,6 +419,18 @@ class Airtable_Directory_Templates {
                                     $photo_url = esc_url($fields['Photo']);
                                 }
                             }
+
+                            // --- NEW: Make phone and email clickable ---
+                            $phone_link = '';
+                            if (!empty($phone)) {
+                                $tel = preg_replace('/[^0-9+]/', '', $phone);
+                                $phone_link = '<a href="tel:' . esc_attr($tel) . '">' . $phone . '</a>';
+                            }
+
+                            $email_link = '';
+                            if (!empty($email)) {
+                                $email_link = '<a href="mailto:' . antispambot($email) . '">' . antispambot($email) . '</a>';
+                            }
                         ?>
                         <tr>
                             <td class="column-photo">
@@ -427,6 +442,8 @@ class Airtable_Directory_Templates {
                             </td>
                             <td class="column-name"><a href="<?php echo esc_url($emp_url); ?>"><?php echo $name; ?></a></td>
                             <td class="column-title"><?php echo $title; ?></td>
+                            <td class="column-phone"><?php echo $phone_link ?: $phone; ?></td>
+                            <td class="column-email"><?php echo $email_link ?: $email; ?></td>
                             <td class="column-department"><?php echo $dept; ?></td>
                         </tr>
                         <?php endforeach; ?>
