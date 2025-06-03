@@ -195,126 +195,148 @@ class Airtable_Directory_Shortcodes {
                 'show' => 'name,address,phone,fax,hours',  // Removed 'url' from default
                 'show_map_link' => 'yes'  // New attribute to control map link display
             ), $atts, 'department_details');
-    
+
             if (empty($atts['department'])) {
                 return '<p>No department ID specified.</p>';
             }
-    
+
             // Determine which fields to show in the output
             $visible_fields = array_map('trim', explode(',', strtolower($atts['show'])));
             $show_map_link = strtolower($atts['show_map_link']) === 'yes';
-    
-            // Fetch department data
-            $department_id = trim($atts['department']);
-            $department_query_params = array(
-                'filterByFormula' => "{fldwAR2a55bspWLPt} = '$department_id'"
-            );
+
+            // Split comma-separated department IDs and clean them up
+            $department_ids = array_map('trim', explode(',', $atts['department']));
             
-            error_log('Department details query for ID: ' . $department_id);
-            $departments = $this->api->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $department_query_params);
+            // Remove any empty values
+            $department_ids = array_filter($department_ids);
             
-            if (!$departments) {
-                error_log('No department found for ID: ' . $department_id);
-                return '<p>Department not found.</p>';
+            if (empty($department_ids)) {
+                return '<p>No valid department IDs specified.</p>';
             }
+
+            $output = '<div class="department-details-container">';
             
-            $department = $departments[0];
-            $fields = isset($department['fields']) ? $department['fields'] : [];
-            
-            error_log('Department fields: ' . print_r($fields, true));
-            
-            // Extract department information
-            $name = isset($fields['Department Name']) ? esc_html($fields['Department Name']) : 'Unknown Department';
-            $physical_address = isset($fields['Physical Address']) ? nl2br(esc_html($fields['Physical Address'])) : 'No address available';
-            $mailing_address = isset($fields['Mailing Address']) ? nl2br(esc_html($fields['Mailing Address'])) : 'No address available';
-            $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No phone available';
-            $fax = isset($fields['Fax']) ? esc_html($fields['Fax']) : 'No fax available';
-            $hours = isset($fields['Hours']) ? esc_html($fields['Hours']) : 'No hours listed';
-            
-            // Build the output
-            $output = '<div class="department-details">';
-            
-            if (in_array('name', $visible_fields)) {
-                $output .= '<h2 class="department-name">' . $name . '</h2>';
-            }
-            
-            if (in_array('address', $visible_fields)) {
-                $output .= '<div class="department-addresses">';
-                if ($physical_address !== 'No address available') {
-                    $output .= '<div class="physical-address">';
-                    $output .= '<h3>Physical Address</h3>';
-                    $output .= '<p>' . $physical_address . '</p>';
-                    
-                    // Add Google Maps link if enabled
-                    if ($show_map_link) {
-                        // Get clean address for map query
-                        $raw_address = isset($fields['Physical Address']) ? $fields['Physical Address'] : '';
-                        if (!empty($raw_address)) {
-                            $map_address = urlencode($raw_address);
-                            $is_mobile = wp_is_mobile();
-                            
-                            if ($is_mobile) {
-                                // For mobile devices, use geo: URI to potentially open native map app
-                                $map_url = 'geo:0,0?q=' . $map_address;
-                            } else {
-                                // For desktop, use standard Google Maps URL
-                                $map_url = 'https://www.google.com/maps?q=' . $map_address;
+            // Loop through each department ID
+            foreach ($department_ids as $department_id) {
+                // Fetch department data
+                $department_query_params = array(
+                    'filterByFormula' => "{fldwAR2a55bspWLPt} = '$department_id'"
+                );
+                
+                error_log('Department details query for ID: ' . $department_id);
+                $departments = $this->api->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $department_query_params);
+                
+                if (!$departments) {
+                    error_log('No department found for ID: ' . $department_id);
+                    $output .= '<p>Department not found for ID: ' . esc_html($department_id) . '</p>';
+                    continue; // Skip to next department ID
+                }
+                
+                $department = $departments[0];
+                $fields = isset($department['fields']) ? $department['fields'] : [];
+                
+                error_log('Department fields: ' . print_r($fields, true));
+                
+                // Extract department information
+                $name = isset($fields['Department Name']) ? esc_html($fields['Department Name']) : 'Unknown Department';
+                $physical_address = isset($fields['Physical Address']) ? nl2br(esc_html($fields['Physical Address'])) : 'No address available';
+                $mailing_address = isset($fields['Mailing Address']) ? nl2br(esc_html($fields['Mailing Address'])) : 'No address available';
+                $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No phone available';
+                $fax = isset($fields['Fax']) ? esc_html($fields['Fax']) : 'No fax available';
+                $hours = isset($fields['Hours']) ? esc_html($fields['Hours']) : 'No hours listed';
+                
+                // Build the output for this department
+                $output .= '<div class="department-details">';
+                
+                if (in_array('name', $visible_fields)) {
+                    $output .= '<h2 class="department-name">' . $name . '</h2>';
+                }
+                
+                if (in_array('address', $visible_fields)) {
+                    $output .= '<div class="department-addresses">';
+                    if ($physical_address !== 'No address available') {
+                        $output .= '<div class="physical-address">';
+                        $output .= '<h3>Physical Address</h3>';
+                        $output .= '<p>' . $physical_address . '</p>';
+                        
+                        // Add Google Maps link if enabled
+                        if ($show_map_link) {
+                            // Get clean address for map query
+                            $raw_address = isset($fields['Physical Address']) ? $fields['Physical Address'] : '';
+                            if (!empty($raw_address)) {
+                                $map_address = urlencode($raw_address);
+                                $is_mobile = wp_is_mobile();
+                                
+                                if ($is_mobile) {
+                                    // For mobile devices, use geo: URI to potentially open native map app
+                                    $map_url = 'geo:0,0?q=' . $map_address;
+                                } else {
+                                    // For desktop, use standard Google Maps URL
+                                    $map_url = 'https://www.google.com/maps?q=' . $map_address;
+                                }
+                                
+                                $output .= '<p class="map-link"><a href="' . esc_url($map_url) . '" target="_blank" rel="noopener noreferrer">';
+                                $output .= '<span class="dashicons dashicons-location"></span> View on Map</a></p>';
                             }
-                            
-                            $output .= '<p class="map-link"><a href="' . esc_url($map_url) . '" target="_blank" rel="noopener noreferrer">';
-                            $output .= '<span class="dashicons dashicons-location"></span> View on Map</a></p>';
                         }
+                        
+                        $output .= '</div>';
                     }
+                    
+                    if ($mailing_address !== 'No address available' && $mailing_address !== $physical_address) {
+                        $output .= '<div class="mailing-address">';
+                        $output .= '<h3>Mailing Address</h3>';
+                        $output .= '<p>' . $mailing_address . '</p>';
+                        
+                        // Add Google Maps link for mailing address if different and enabled
+                        if ($show_map_link) {
+                            $raw_address = isset($fields['Mailing Address']) ? $fields['Mailing Address'] : '';
+                            if (!empty($raw_address)) {
+                                $map_address = urlencode($raw_address);
+                                $is_mobile = wp_is_mobile();
+                                
+                                if ($is_mobile) {
+                                    $map_url = 'geo:0,0?q=' . $map_address;
+                                } else {
+                                    $map_url = 'https://www.google.com/maps?q=' . $map_address;
+                                }
+                                
+                                $output .= '<p class="map-link"><a href="' . esc_url($map_url) . '" target="_blank" rel="noopener noreferrer">';
+                                $output .= '<span class="dashicons dashicons-location"></span> View on Map</a></p>';
+                            }
+                        }
+                        
+                        $output .= '</div>';
+                    }
+
                     
                     $output .= '</div>';
                 }
                 
-                if ($mailing_address !== 'No address available' && $mailing_address !== $physical_address) {
-                    $output .= '<div class="mailing-address">';
-                    $output .= '<h3>Mailing Address</h3>';
-                    $output .= '<p>' . $mailing_address . '</p>';
-                    
-                    // Add Google Maps link for mailing address if different and enabled
-                    if ($show_map_link) {
-                        $raw_address = isset($fields['Mailing Address']) ? $fields['Mailing Address'] : '';
-                        if (!empty($raw_address)) {
-                            $map_address = urlencode($raw_address);
-                            $is_mobile = wp_is_mobile();
-                            
-                            if ($is_mobile) {
-                                $map_url = 'geo:0,0?q=' . $map_address;
-                            } else {
-                                $map_url = 'https://www.google.com/maps?q=' . $map_address;
-                            }
-                            
-                            $output .= '<p class="map-link"><a href="' . esc_url($map_url) . '" target="_blank" rel="noopener noreferrer">';
-                            $output .= '<span class="dashicons dashicons-location"></span> View on Map</a></p>';
-                        }
-                    }
-                    
-                    $output .= '</div>';
+                $output .= '<div class="department-contact">';
+                if (in_array('phone', $visible_fields) && $phone !== 'No phone available') {
+                    $output .= '<p><strong>Phone:</strong> <a href="tel:' . preg_replace('/[^0-9+]/', '', $phone) . '">' . $phone . '</a></p>';
+                }
+                
+                if (in_array('fax', $visible_fields) && $fax !== 'No fax available') {
+                    $output .= '<p><strong>Fax:</strong> <a href="tel:' . preg_replace('/[^0-9+]/', '', $fax) . '">' . $fax . '</a></p>';
                 }
 
-                
+                if (in_array('hours', $visible_fields) && $hours !== 'No hours listed') {
+                    $output .= '<p><strong>Hours:</strong> ' . $hours . '</p>';
+                }
+
                 $output .= '</div>';
+                
+                $output .= '</div>'; // End individual department-details
+                
+                // Add some spacing between multiple departments if there are more than one
+                if (count($department_ids) > 1 && $department_id !== end($department_ids)) {
+                    $output .= '<hr class="department-separator">';
+                }
             }
             
-            $output .= '<div class="department-contact">';
-            if (in_array('phone', $visible_fields) && $phone !== 'No phone available') {
-                $output .= '<p><strong>Phone:</strong> <a href="tel:' . preg_replace('/[^0-9+]/', '', $phone) . '">' . $phone . '</a></p>';
-            }
-            
-            if (in_array('fax', $visible_fields) && $fax !== 'No fax available') {
-                $output .= '<p><strong>Fax:</strong> <a href="tel:' . preg_replace('/[^0-9+]/', '', $fax) . '">' . $fax . '</a></p>';
-            }
-
-            if (in_array('hours', $visible_fields) && $hours !== 'No hours listed') {
-                $output .= '<p><strong>Hours:</strong> ' . $hours . '</p>';
-            }
-
-            $output .= '</div>';
-            
-            $output .= '</div>';
+            $output .= '</div>'; // End department-details-container
             
             return $output;
         } catch (Exception $e) {

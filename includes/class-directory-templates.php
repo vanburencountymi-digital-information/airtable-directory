@@ -397,7 +397,7 @@ class Airtable_Directory_Templates {
     </div>
 
     <!-- Table View -->
-    <div class="table-view-container" style="display:block;">
+    <div class="table-view-container tbl-alternate-rows" style="display:block;">
         <table class="staff-directory-table">
             <thead>
                 <tr>
@@ -583,6 +583,10 @@ class Airtable_Directory_Templates {
         $dept = isset($fields['Department']) ? esc_html($fields['Department']) : '';
         $emp_id = isset($fields['Employee ID']) ? esc_html($fields['Employee ID']) : '';
 
+        // Add these lines to extract phone and email
+        $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
+        $email = isset($fields['Email']) ? esc_html($fields['Email']) : '';
+
         // Photo URL extraction logic (copied from class-shortcodes.php)
         $photo_url = '';
         if (isset($fields['Photo'])) {
@@ -633,7 +637,15 @@ class Airtable_Directory_Templates {
                 <?php endif; ?>
                 
                 <div class="employee-contact">
-                    <p><em>Contact information not available in current data structure.</em></p>
+                    <?php if (!empty($phone)): ?>
+                        <p><strong>Phone:</strong> <a href="tel:<?php echo preg_replace('/[^0-9+]/', '', $phone); ?>"><?php echo $phone; ?></a></p>
+                    <?php endif; ?>
+                    <?php if (!empty($email)): ?>
+                        <p><strong>Email:</strong> <a href="mailto:<?php echo antispambot($email); ?>"><?php echo antispambot($email); ?></a></p>
+                    <?php endif; ?>
+                    <?php if (empty($phone) && empty($email)): ?>
+                        <p><em>No contact info found.</em></p>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
