@@ -223,6 +223,12 @@ class Airtable_Directory_Templates {
             return;
         }
         
+        // Check if the employee is public before showing their page
+        if (!$this->api->is_staff_public($employee_data)) {
+            $this->render_404();
+            return;
+        }
+        
         ob_start();
         ?>
         <div class="directory-employee-page">

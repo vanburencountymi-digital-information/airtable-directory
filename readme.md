@@ -20,6 +20,7 @@ Airtable Directory is a powerful WordPress plugin that pulls employee and depart
 - **NEW: Department hierarchy support** - Parent/child department relationships with nested staff displays
 - **NEW: Department photo support** - Display department photos alongside contact information
 - **NEW: Multiple department support** - Display multiple departments in a single shortcode
+- **NEW: Staff visibility control** - Public field allows department heads to control who appears in public directories
 - Displays staff members in responsive card and table layouts
 - Supports filtering by department using department IDs
 - Allows custom selection of visible fields (name, title, department, email, phone, photo)
@@ -221,6 +222,20 @@ The plugin automatically converts department and employee names into URL-friendl
 - Removing duplicate hyphens
 - Handling duplicate names by appending numbers
 
+= How do I control which staff members are visible on the website? =
+
+Add a "Public" field (checkbox type) to your Airtable Staff table. Only staff members with this field checked will appear in:
+- Staff directory shortcodes
+- Department pages showing staff
+- Individual employee profile pages
+- Searchable staff directories
+
+Staff members without the Public field checked (or with it unchecked) will be completely hidden from all public-facing directory displays. This gives department heads full control over their staff's public visibility.
+
+= What happens if I don't have a Public field? =
+
+If your Staff table doesn't have a Public field, all staff members will be treated as non-public and will not appear in any directory displays. You must add the Public field and check it for staff members you want to be publicly visible.
+
 == Changelog ==
 
 = 2.2 =
@@ -232,9 +247,11 @@ The plugin automatically converts department and employee names into URL-friendl
 * **NEW:** Breadcrumb navigation on directory pages
 * **NEW:** Department photo support in shortcodes and directory pages
 * **NEW:** Multiple department support in department_details shortcode (comma-separated IDs)
+* **NEW:** Staff visibility control via Public field - only public staff appear in directories
 * **NEW:** Enhanced admin interface with directory cache management and URL controls
 * Enhanced department_details shortcode with photo field support
 * Added support for displaying multiple departments in single shortcode
+* Added Public field support for controlling staff visibility across all directory features
 * Extended API class with department hierarchy and staff lookup methods
 * Added comprehensive CSS styling for directory pages
 * Improved cache management for directory-specific data

@@ -41,7 +41,7 @@ class Airtable_Directory_Shortcodes {
             // Determine which fields to show in the output.
             $visible_fields = array_map('trim', explode(',', strtolower($atts['show'])));
             // These are the fields we want from the Staff table.
-            $fields_to_fetch = array('Name', 'Title', 'Department', 'Email', 'Phone', 'Photo');
+            $fields_to_fetch = array('Name', 'Title', 'Department', 'Email', 'Phone', 'Photo', 'Public');
     
             $records = array();
             
@@ -96,6 +96,13 @@ class Airtable_Directory_Shortcodes {
     
             if (!$records) {
                 return '<p>No staff members found.</p>';
+            }
+    
+            // Filter to only show public staff members
+            $records = $this->api->filter_public_staff($records);
+            
+            if (empty($records)) {
+                return '<p>No public staff members found.</p>';
             }
     
             $output = '<div class="staff-directory">';
@@ -388,8 +395,8 @@ class Airtable_Directory_Shortcodes {
             $per_page = intval($atts['per_page']);
             $default_view = in_array($atts['default_view'], array('card', 'table')) ? $atts['default_view'] : 'card';
             
-            // Fields to fetch
-            $fields_to_fetch = array('Name', 'Title', 'Department', 'Email', 'Phone', 'Photo');
+            // Fields to fetch - include Public field
+            $fields_to_fetch = array('Name', 'Title', 'Department', 'Email', 'Phone', 'Photo', 'Public');
             
             // Get all staff members
             $staff_query_params = array(
@@ -399,6 +406,13 @@ class Airtable_Directory_Shortcodes {
             
             if (!$records) {
                 return '<p>No staff members found.</p>';
+            }
+            
+            // Filter to only show public staff members
+            $records = $this->api->filter_public_staff($records);
+            
+            if (empty($records)) {
+                return '<p>No public staff members found.</p>';
             }
             
             // Create unique ID for this instance

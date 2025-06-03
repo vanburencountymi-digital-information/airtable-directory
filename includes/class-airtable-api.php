@@ -128,7 +128,8 @@ class Airtable_Directory_API {
     public function get_employee_by_id($employee_id) {
         $query_params = array(
             'filterByFormula' => "{Employee ID} = " . intval($employee_id),
-            'maxRecords' => 1
+            'maxRecords' => 1,
+            'fields' => array('Name', 'Title', 'Department', 'Email', 'Phone', 'Photo', 'Public', 'Employee ID')
         );
         
         $employees = $this->fetch_data(AIRTABLE_STAFF_TABLE, $query_params);
@@ -164,41 +165,83 @@ class Airtable_Directory_API {
     }
     
     /**
-     * Get staff count for a department using Employee IDs array or Staff field
+     * Check if a staff member is public based on the Public field
      *
-     * @param string|int $department_id Department ID number
-     * @return int Number of staff members
+     * @param array $staff_record Staff record from Airtable
+     * @return bool True if staff member should be displayed publicly
      */
-    public function get_department_staff_count($department_id) {
-        $department = $this->get_department_by_id($department_id);
+    public function is_staff_public($staff_record) {
+        $fields = isset($staff_record['fields']) ? $staff_record['fields'] : array();
         
-        if (!$department) {
-            return 0;
+        // Debug logging to understand the Public field format
+        if (isset($fields['Public'])) {
+            error_log('Public field found for staff member. Value: ' . print_r($fields['Public'], true) . ' Type: ' . gettype($fields['Public']));
+        } else {
+            error_log('No Public field found for staff member: ' . (isset($fields['Name']) ? $fields['Name'] : 'Unknown'));
+            return false;
         }
         
-        $fields = isset($department['fields']) ? $department['fields'] : array();
-        
-        // Check for Employee IDs array first
-        if (isset($fields['Employee IDs']) && is_array($fields['Employee IDs'])) {
-            return count($fields['Employee IDs']);
+        // Check if Public field exists and evaluate its value
+        if (isset($fields['Public'])) {
+            // Airtable checkbox fields return an array with checked values
+            // If checked, it returns an array like ['Yes'] or [true]
+            // If unchecked, it may be empty array, null, or false
+            if (is_array($fields['Public'])) {
+                $is_public = !empty($fields['Public']);
+                error_log('Array Public field - Is public: ' . ($is_public ? 'true' : 'false'));
+                return $is_public;
+            }
+            // Handle boolean values
+            elseif (is_bool($fields['Public'])) {
+                error_log('Boolean Public field: ' . ($fields['Public'] ? 'true' : 'false'));
+                return $fields['Public'];
+            }
+            // Handle string values like 'Yes', 'True', etc.
+            elseif (is_string($fields['Public'])) {
+                $value = strtolower(trim($fields['Public']));
+                $is_public = in_array($value, array('yes', 'true', '1', 'on'));
+                error_log('String Public field "' . $fields['Public'] . '" - Is public: ' . ($is_public ? 'true' : 'false'));
+                return $is_public;
+            }
+            // Handle other types
+            else {
+                error_log('Unknown Public field type: ' . gettype($fields['Public']) . ' Value: ' . print_r($fields['Public'], true));
+            }
         }
         
-        // Check for Staff field (comma-separated string)
-        if (isset($fields['Staff']) && !empty($fields['Staff'])) {
-            $staff_ids = explode(',', $fields['Staff']);
-            return count(array_filter(array_map('trim', $staff_ids)));
-        }
-        
-        return 0;
+        // Default to false (not public) if Public field is missing or invalid
+        return false;
     }
-    
+
+    /**
+     * Filter staff records to only include public ones
+     *
+     * @param array $staff_records Array of staff records
+     * @return array Array of public staff records
+     */
+    public function filter_public_staff($staff_records) {
+        if (empty($staff_records)) {
+            return array();
+        }
+        
+        $public_staff = array();
+        foreach ($staff_records as $staff_record) {
+            if ($this->is_staff_public($staff_record)) {
+                $public_staff[] = $staff_record;
+            }
+        }
+        
+        return $public_staff;
+    }
+
     /**
      * Get staff members by department using Employee IDs array or Staff field
      *
      * @param string|int $department_id Department ID number
+     * @param bool $public_only Whether to filter to only public staff members (default: true)
      * @return array Array of staff records
      */
-    public function get_staff_by_department($department_id) {
+    public function get_staff_by_department($department_id, $public_only = true) {
         // First, get the department to find employee IDs
         $department = $this->get_department_by_id($department_id);
         
@@ -243,7 +286,50 @@ class Airtable_Directory_API {
         $staff_results = $this->fetch_data(AIRTABLE_STAFF_TABLE, $staff_query_params);
         error_log("Staff lookup returned " . count($staff_results) . " results");
         
+        // Filter to only public staff if requested
+        if ($public_only) {
+            $staff_results = $this->filter_public_staff($staff_results);
+            error_log("After filtering for public staff: " . count($staff_results) . " results");
+        }
+        
         return $staff_results;
+    }
+    
+    /**
+     * Get staff count for a department using Employee IDs array or Staff field
+     *
+     * @param string|int $department_id Department ID number
+     * @param bool $public_only Whether to count only public staff members (default: true)
+     * @return int Number of staff members
+     */
+    public function get_department_staff_count($department_id, $public_only = true) {
+        if ($public_only) {
+            // Get actual staff records and count them after filtering
+            $staff_members = $this->get_staff_by_department($department_id, true);
+            return count($staff_members);
+        }
+        
+        // Original logic for counting all staff (including non-public)
+        $department = $this->get_department_by_id($department_id);
+        
+        if (!$department) {
+            return 0;
+        }
+        
+        $fields = isset($department['fields']) ? $department['fields'] : array();
+        
+        // Check for Employee IDs array first
+        if (isset($fields['Employee IDs']) && is_array($fields['Employee IDs'])) {
+            return count($fields['Employee IDs']);
+        }
+        
+        // Check for Staff field (comma-separated string)
+        if (isset($fields['Staff']) && !empty($fields['Staff'])) {
+            $staff_ids = explode(',', $fields['Staff']);
+            return count(array_filter(array_map('trim', $staff_ids)));
+        }
+        
+        return 0;
     }
     
     /**
