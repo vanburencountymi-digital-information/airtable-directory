@@ -230,7 +230,7 @@ Add a "Public" field (checkbox type) to your Airtable Staff table. Only staff me
 - Individual employee profile pages
 - Searchable staff directories
 
-Staff members without the Public field checked (or with it unchecked) will be completely hidden from all public-facing directory displays. This gives department heads full control over their staff's public visibility.
+Staff members without the Public field checked (or with it unchecked) will be completely hidden from all public-facing directory displays. Additionally, non-public staff members will not have individual profile page URLs generated, ensuring they cannot be accessed even if someone tries to guess the URL pattern. This gives department heads full control over their staff's public visibility and ensures complete privacy for non-public staff.
 
 = What happens if I don't have a Public field? =
 

@@ -182,6 +182,7 @@ class Airtable_Directory_Routes {
     
     /**
      * Get all employee slugs with their IDs (for slug-to-ID mapping)
+     * Only includes public employees
      *
      * @return array Array of slug => ID mappings
      */
@@ -193,8 +194,11 @@ class Airtable_Directory_Routes {
             return $cached_slugs;
         }
         
-        // Fetch all employees
-        $employees = $this->api->fetch_data(AIRTABLE_STAFF_TABLE);
+        // Fetch all employees including Public field
+        $query_params = array(
+            'fields' => array('Name', 'Employee ID', 'Public')
+        );
+        $employees = $this->api->fetch_data(AIRTABLE_STAFF_TABLE, $query_params);
         $slug_mappings = array();
         
         if ($employees) {
@@ -204,7 +208,8 @@ class Airtable_Directory_Routes {
                 // Use Employee ID instead of field ID
                 $emp_id = isset($fields['Employee ID']) ? $fields['Employee ID'] : '';
                 
-                if (!empty($emp_name) && !empty($emp_id)) {
+                // Only create routes for public employees
+                if (!empty($emp_name) && !empty($emp_id) && $this->api->is_staff_public($employee)) {
                     $slug = $this->generate_slug($emp_name);
                     if (!empty($slug)) {
                         // Handle duplicate slugs by appending employee ID
