@@ -1,12 +1,11 @@
 === Airtable Directory ===
-Contributors: yourname
+Contributors: Drake Olejniczak
 Tags: airtable, directory, staff, shortcode, custom directory, department pages, employee profiles
 Requires at least: 5.0
 Tested up to: 6.4
 Requires PHP: 7.4
 Stable tag: 2.2
-License: GPLv2 or later
-License URI: https://www.gnu.org/licenses/gpl-2.0.html
+License: MIT
 
 A comprehensive WordPress plugin to display staff directories using data from Airtable. Features department pages, employee profiles, hierarchy support, and customizable field visibility.
 
