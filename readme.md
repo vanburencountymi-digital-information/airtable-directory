@@ -7,7 +7,7 @@ Requires PHP: 7.4
 Stable tag: 2.2
 License: MIT
 
-A comprehensive WordPress plugin to display staff directories using data from Airtable. Features department pages, employee profiles, hierarchy support, and customizable field visibility.
+A comprehensive WordPress plugin to display staff directories using data from Airtable. Features department pages, employee profiles, hierarchy support, customizable field visibility, and department photo displays.
 
 == Description ==
 
@@ -18,6 +18,8 @@ Airtable Directory is a powerful WordPress plugin that pulls employee and depart
 - **NEW: Directory Pages** - Automatic `/directory/` pages with department and employee profiles
 - **NEW: URL-friendly slugs** - Clean URLs like `/directory/human-resources/` and `/directory/john-smith/`
 - **NEW: Department hierarchy support** - Parent/child department relationships with nested staff displays
+- **NEW: Department photo support** - Display department photos alongside contact information
+- **NEW: Multiple department support** - Display multiple departments in a single shortcode
 - Displays staff members in responsive card and table layouts
 - Supports filtering by department using department IDs
 - Allows custom selection of visible fields (name, title, department, email, phone, photo)
@@ -96,11 +98,29 @@ Display department information:
 ```
 Shows details for the specified department.
 
+Display Multiple Departments:
+```
+[department_details department="recXXXXXXXXXXXX,recYYYYYYYYYYYY"]
+```
+Shows details for multiple departments by providing comma-separated department IDs.
+
 Control Displayed Fields:
 ```
-[department_details department="recXXXXXXXXXXXX" show="name,address,phone"]
+[department_details department="recXXXXXXXXXXXX" show="name,photo,address,phone"]
 ```
-Only displays Name, Address, and Phone for the specified department.
+Controls which fields are displayed. Available fields include:
+- `name` - Department name
+- `photo` - Department photo/building image
+- `address` - Physical and mailing addresses
+- `phone` - Phone number
+- `fax` - Fax number
+- `hours` - Business hours
+
+Control Map Links:
+```
+[department_details department="recXXXXXXXXXXXX" show_map_link="no"]
+```
+Use `show_map_link="no"` to hide the "View on Map" links for addresses. Default is "yes".
 
 **Searchable Staff Directory**
 
@@ -156,6 +176,25 @@ In your Airtable Departments table, ensure you have a "Parent Department" field 
 
 Go to Settings > Airtable Directory and click "Refresh URL Rules." This flushes WordPress rewrite rules and should resolve URL issues. If problems persist, deactivate and reactivate the plugin.
 
+= How do I add department photos? =
+
+Ensure your Airtable Departments table has a Photo field that stores attachments. The plugin will automatically pull the image URL and display photos in department cards, detail pages, and shortcodes when the 'photo' field is included in the 'show' parameter.
+
+= Can I display multiple departments in one shortcode? =
+
+Yes! You can display multiple departments using the department_details shortcode by providing comma-separated department IDs:
+```
+[department_details department="recDEPT1,recDEPT2,recDEPT3"]
+```
+
+= How do I control which department fields are shown? =
+
+Use the 'show' parameter to specify which fields to display:
+```
+[department_details department="recXXXXXXXXXXXX" show="name,photo,address,phone"]
+```
+Available fields: name, photo, address, phone, fax, hours
+
 = How do I add employee photos? =
 
 Ensure your Airtable Staff table has a Photo field that stores attachments. The plugin will automatically pull the image URL and display photos in cards, tables, and employee profile pages.
@@ -191,11 +230,15 @@ The plugin automatically converts department and employee names into URL-friendl
 * **NEW:** Main directory index page organizing all departments
 * **NEW:** Automatic URL slug generation for departments and employees
 * **NEW:** Breadcrumb navigation on directory pages
+* **NEW:** Department photo support in shortcodes and directory pages
+* **NEW:** Multiple department support in department_details shortcode (comma-separated IDs)
 * **NEW:** Enhanced admin interface with directory cache management and URL controls
+* Enhanced department_details shortcode with photo field support
+* Added support for displaying multiple departments in single shortcode
 * Extended API class with department hierarchy and staff lookup methods
 * Added comprehensive CSS styling for directory pages
 * Improved cache management for directory-specific data
-* Updated documentation with directory features
+* Updated documentation with new features
 
 = 2.1 =
 * Refactored plugin into a modular, class-based structure
