@@ -192,7 +192,7 @@ class Airtable_Directory_Shortcodes {
             
             $atts = shortcode_atts(array(
                 'department' => '',
-                'show' => 'name,address,phone,fax,hours',  // Removed 'url' from default
+                'show' => 'name,photo,address,phone,fax,hours',  // Added 'photo' to default
                 'show_map_link' => 'yes'  // New attribute to control map link display
             ), $atts, 'department_details');
 
@@ -245,11 +245,35 @@ class Airtable_Directory_Shortcodes {
                 $fax = isset($fields['Fax']) ? esc_html($fields['Fax']) : 'No fax available';
                 $hours = isset($fields['Hours']) ? esc_html($fields['Hours']) : 'No hours listed';
                 
+                // Photo URL extraction logic (same as staff photos)
+                $photo_url = '';
+                if (isset($fields['Photo'])) {
+                    if (is_array($fields['Photo']) && !empty($fields['Photo'])) {
+                        if (isset($fields['Photo'][0]['url'])) {
+                            $photo_url = esc_url($fields['Photo'][0]['url']);
+                        } elseif (isset($fields['Photo'][0]['thumbnails']['large']['url'])) {
+                            $photo_url = esc_url($fields['Photo'][0]['thumbnails']['large']['url']);
+                        } elseif (isset($fields['Photo']['url'])) {
+                            $photo_url = esc_url($fields['Photo']['url']);
+                        } elseif (is_string($fields['Photo'][0])) {
+                            $photo_url = esc_url($fields['Photo'][0]);
+                        }
+                    } elseif (is_string($fields['Photo'])) {
+                        $photo_url = esc_url($fields['Photo']);
+                    }
+                }
+                
                 // Build the output for this department
                 $output .= '<div class="department-details">';
                 
                 if (in_array('name', $visible_fields)) {
                     $output .= '<h2 class="department-name">' . $name . '</h2>';
+                }
+                
+                if (in_array('photo', $visible_fields) && !empty($photo_url)) {
+                    $output .= '<div class="department-photo-container">';
+                    $output .= '<img src="' . $photo_url . '" alt="Photo of ' . esc_attr($name) . ' building" class="department-photo">';
+                    $output .= '</div>';
                 }
                 
                 if (in_array('address', $visible_fields)) {

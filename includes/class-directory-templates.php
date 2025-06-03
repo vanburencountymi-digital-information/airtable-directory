@@ -254,46 +254,79 @@ class Airtable_Directory_Templates {
         $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
         $url = isset($fields['URL']) ? esc_url($fields['URL']) : '';
         
+        // Photo URL extraction logic (same as staff photos)
+        $photo_url = '';
+        if (isset($fields['Photo'])) {
+            if (is_array($fields['Photo']) && !empty($fields['Photo'])) {
+                if (isset($fields['Photo'][0]['url'])) {
+                    // Original expected format
+                    $photo_url = esc_url($fields['Photo'][0]['url']);
+                } elseif (isset($fields['Photo'][0]['thumbnails']['large']['url'])) {
+                    // Alternative format sometimes returned by Airtable
+                    $photo_url = esc_url($fields['Photo'][0]['thumbnails']['large']['url']);
+                } elseif (isset($fields['Photo']['url'])) {
+                    // Another possible format
+                    $photo_url = esc_url($fields['Photo']['url']);
+                } elseif (is_string($fields['Photo'][0])) {
+                    // Direct URL format
+                    $photo_url = esc_url($fields['Photo'][0]);
+                }
+            } elseif (is_string($fields['Photo'])) {
+                // Direct URL string
+                $photo_url = esc_url($fields['Photo']);
+            }
+        }
+        
         ?>
         <div class="department-details">
-            <h2 class="department-name"><?php echo $name; ?></h2>
-            
-            <?php if (!empty($physical_address)): ?>
-                <div class="department-addresses">
-                    <div class="physical-address">
-                        <h3>Address</h3>
-                        <p><?php echo $physical_address; ?></p>
+            <div class="department-header">
+                <?php if (!empty($photo_url)): ?>
+                    <div class="department-photo-container">
+                        <img src="<?php echo $photo_url; ?>" alt="Photo of <?php echo $name; ?> building" class="department-photo">
+                    </div>
+                <?php endif; ?>
+                
+                <div class="department-info">
+                    <h2 class="department-name"><?php echo $name; ?></h2>
+                    
+                    <?php if (!empty($physical_address)): ?>
+                        <div class="department-addresses">
+                            <div class="physical-address">
+                                <h3>Address</h3>
+                                <p><?php echo $physical_address; ?></p>
+                                
+                                <?php if (!empty($physical_address)): ?>
+                                    <?php
+                                    $raw_address = isset($fields['Physical Address']) ? $fields['Physical Address'] : '';
+                                    $map_address = urlencode($raw_address);
+                                    $is_mobile = wp_is_mobile();
+                                    
+                                    if ($is_mobile) {
+                                        $map_url = 'geo:0,0?q=' . $map_address;
+                                    } else {
+                                        $map_url = 'https://www.google.com/maps?q=' . $map_address;
+                                    }
+                                    ?>
+                                    <p class="map-link">
+                                        <a href="<?php echo esc_url($map_url); ?>" target="_blank" rel="noopener noreferrer">
+                                            <span class="dashicons dashicons-location"></span> View on Map
+                                        </a>
+                                    </p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <div class="department-contact">
+                        <?php if (!empty($phone)): ?>
+                            <p><strong>Phone:</strong> <a href="tel:<?php echo preg_replace('/[^0-9+]/', '', $phone); ?>"><?php echo $phone; ?></a></p>
+                        <?php endif; ?>
                         
-                        <?php if (!empty($physical_address)): ?>
-                            <?php
-                            $raw_address = isset($fields['Physical Address']) ? $fields['Physical Address'] : '';
-                            $map_address = urlencode($raw_address);
-                            $is_mobile = wp_is_mobile();
-                            
-                            if ($is_mobile) {
-                                $map_url = 'geo:0,0?q=' . $map_address;
-                            } else {
-                                $map_url = 'https://www.google.com/maps?q=' . $map_address;
-                            }
-                            ?>
-                            <p class="map-link">
-                                <a href="<?php echo esc_url($map_url); ?>" target="_blank" rel="noopener noreferrer">
-                                    <span class="dashicons dashicons-location"></span> View on Map
-                                </a>
-                            </p>
+                        <?php if (!empty($url)): ?>
+                            <p><strong>Website:</strong> <a href="<?php echo $url; ?>" target="_blank" rel="noopener noreferrer">Visit Department Website</a></p>
                         <?php endif; ?>
                     </div>
                 </div>
-            <?php endif; ?>
-            
-            <div class="department-contact">
-                <?php if (!empty($phone)): ?>
-                    <p><strong>Phone:</strong> <a href="tel:<?php echo preg_replace('/[^0-9+]/', '', $phone); ?>"><?php echo $phone; ?></a></p>
-                <?php endif; ?>
-                
-                <?php if (!empty($url)): ?>
-                    <p><strong>Website:</strong> <a href="<?php echo $url; ?>" target="_blank" rel="noopener noreferrer">Visit Department Website</a></p>
-                <?php endif; ?>
             </div>
         </div>
         <?php
@@ -532,40 +565,66 @@ class Airtable_Directory_Templates {
         // Count child departments
         $child_count = isset($child_departments[$dept_id]) ? count($child_departments[$dept_id]) : 0;
         
+        // Photo URL extraction logic (same as staff photos)
+        $photo_url = '';
+        if (isset($fields['Photo'])) {
+            if (is_array($fields['Photo']) && !empty($fields['Photo'])) {
+                if (isset($fields['Photo'][0]['url'])) {
+                    $photo_url = esc_url($fields['Photo'][0]['url']);
+                } elseif (isset($fields['Photo'][0]['thumbnails']['large']['url'])) {
+                    $photo_url = esc_url($fields['Photo'][0]['thumbnails']['large']['url']);
+                } elseif (isset($fields['Photo']['url'])) {
+                    $photo_url = esc_url($fields['Photo']['url']);
+                } elseif (is_string($fields['Photo'][0])) {
+                    $photo_url = esc_url($fields['Photo'][0]);
+                }
+            } elseif (is_string($fields['Photo'])) {
+                $photo_url = esc_url($fields['Photo']);
+            }
+        }
+        
         ?>
         <div class="department-card">
-            <h3><a href="<?php echo esc_url($dept_url); ?>"><?php echo esc_html($dept_name); ?></a></h3>
-            
-            <div class="department-stats">
-                <?php if ($staff_count > 0): ?>
-                    <span class="staff-count"><?php echo $staff_count; ?> staff member<?php echo $staff_count !== 1 ? 's' : ''; ?></span>
-                <?php endif; ?>
-                
-                <?php if ($child_count > 0): ?>
-                    <span class="child-count"><?php echo $child_count; ?> sub-department<?php echo $child_count !== 1 ? 's' : ''; ?></span>
-                <?php endif; ?>
-            </div>
-            
-            <?php if (isset($child_departments[$dept_id])): ?>
-                <div class="child-departments">
-                    <strong>Sub-departments:</strong>
-                    <ul>
-                        <?php foreach ($child_departments[$dept_id] as $child): ?>
-                            <?php 
-                            $child_fields = isset($child['fields']) ? $child['fields'] : array();
-                            $child_name = isset($child_fields['Department Name']) ? $child_fields['Department Name'] : 'Unknown';
-                            
-                            // Skip if no name
-                            if ($child_name === 'Unknown') continue;
-                            
-                            $child_slug = $this->routes->generate_slug($child_name);
-                            $child_url = home_url('/directory/' . $child_slug . '/');
-                            ?>
-                            <li><a href="<?php echo esc_url($child_url); ?>"><?php echo esc_html($child_name); ?></a></li>
-                        <?php endforeach; ?>
-                    </ul>
+            <?php if (!empty($photo_url)): ?>
+                <div class="department-card-photo">
+                    <img src="<?php echo $photo_url; ?>" alt="Photo of <?php echo esc_attr($dept_name); ?> building" class="department-card-image">
                 </div>
             <?php endif; ?>
+            
+            <div class="department-card-content">
+                <h3><a href="<?php echo esc_url($dept_url); ?>"><?php echo esc_html($dept_name); ?></a></h3>
+                
+                <div class="department-stats">
+                    <?php if ($staff_count > 0): ?>
+                        <span class="staff-count"><?php echo $staff_count; ?> staff member<?php echo $staff_count !== 1 ? 's' : ''; ?></span>
+                    <?php endif; ?>
+                    
+                    <?php if ($child_count > 0): ?>
+                        <span class="child-count"><?php echo $child_count; ?> sub-department<?php echo $child_count !== 1 ? 's' : ''; ?></span>
+                    <?php endif; ?>
+                </div>
+                
+                <?php if (isset($child_departments[$dept_id])): ?>
+                    <div class="child-departments">
+                        <strong>Sub-departments:</strong>
+                        <ul>
+                            <?php foreach ($child_departments[$dept_id] as $child): ?>
+                                <?php 
+                                $child_fields = isset($child['fields']) ? $child['fields'] : array();
+                                $child_name = isset($child_fields['Department Name']) ? $child_fields['Department Name'] : 'Unknown';
+                                
+                                // Skip if no name
+                                if ($child_name === 'Unknown') continue;
+                                
+                                $child_slug = $this->routes->generate_slug($child_name);
+                                $child_url = home_url('/directory/' . $child_slug . '/');
+                                ?>
+                                <li><a href="<?php echo esc_url($child_url); ?>"><?php echo esc_html($child_name); ?></a></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
         <?php
     }
