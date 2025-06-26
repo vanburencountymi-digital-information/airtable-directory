@@ -35,11 +35,13 @@ class Airtable_Directory_Shortcodes {
         try {
             $atts = shortcode_atts(array(
                 'department' => '',
-                'show'       => 'name,title,department,email,phone,photo'
+                'show'       => 'name,title,department,email,phone,photo',
+                'view'       => 'table' // New attribute for view type
             ), $atts, 'staff_directory');
     
             // Determine which fields to show in the output.
             $visible_fields = array_map('trim', explode(',', strtolower($atts['show'])));
+            $view = strtolower($atts['view']);
             // These are the fields we want from the Staff table.
             $fields_to_fetch = array('Name', 'Title', 'Department', 'Email', 'Phone', 'Photo', 'Public');
     
@@ -104,7 +106,86 @@ class Airtable_Directory_Shortcodes {
             if (empty($records)) {
                 return '<p>No public staff members found.</p>';
             }
-    
+
+            // Minimal Table View
+            if ($view === 'table') {
+                $output = '<div class="staff-directory-table-container">';
+                $output .= '<table class="staff-directory-table">';
+                $output .= '<thead><tr>';
+                if (in_array('photo', $visible_fields)) {
+                    $output .= '<th>Photo</th>';
+                }
+                if (in_array('name', $visible_fields)) {
+                    $output .= '<th>Name</th>';
+                }
+                if (in_array('title', $visible_fields)) {
+                    $output .= '<th>Title</th>';
+                }
+                if (in_array('department', $visible_fields)) {
+                    $output .= '<th>Department</th>';
+                }
+                if (in_array('email', $visible_fields)) {
+                    $output .= '<th>Email</th>';
+                }
+                if (in_array('phone', $visible_fields)) {
+                    $output .= '<th>Phone</th>';
+                }
+                $output .= '</tr></thead><tbody>';
+                foreach ($records as $record) {
+                    $fields = isset($record['fields']) ? $record['fields'] : [];
+                    $name  = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
+                    $title = isset($fields['Title']) ? esc_html($fields['Title']) : 'No Title';
+                    $dept  = isset($fields['Department']) ? html_entity_decode($fields['Department']) : 'No Department';
+                    $email = isset($fields['Email']) ? esc_html($fields['Email']) : 'No Email';
+                    $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
+                    $photo_url = '';
+                    if (isset($fields['Photo'])) {
+                        if (is_array($fields['Photo']) && !empty($fields['Photo'])) {
+                            if (isset($fields['Photo'][0]['url'])) {
+                                $photo_url = esc_url($fields['Photo'][0]['url']);
+                            } elseif (isset($fields['Photo'][0]['thumbnails']['large']['url'])) {
+                                $photo_url = esc_url($fields['Photo'][0]['thumbnails']['large']['url']);
+                            } elseif (isset($fields['Photo']['url'])) {
+                                $photo_url = esc_url($fields['Photo']['url']);
+                            } elseif (is_string($fields['Photo'][0])) {
+                                $photo_url = esc_url($fields['Photo'][0]);
+                            }
+                        } elseif (is_string($fields['Photo'])) {
+                            $photo_url = esc_url($fields['Photo']);
+                        }
+                    }
+                    $output .= '<tr>';
+                    if (in_array('photo', $visible_fields)) {
+                        $output .= '<td>';
+                        if (!empty($photo_url)) {
+                            $output .= "<img src='$photo_url' alt='Photo of $name' class='staff-photo-thumbnail'>";
+                        } else {
+                            $output .= "<div class='staff-photo-thumbnail no-photo'><span>No Photo</span></div>";
+                        }
+                        $output .= '</td>';
+                    }
+                    if (in_array('name', $visible_fields)) {
+                        $output .= "<td>$name</td>";
+                    }
+                    if (in_array('title', $visible_fields)) {
+                        $output .= "<td>$title</td>";
+                    }
+                    if (in_array('department', $visible_fields)) {
+                        $output .= "<td>$dept</td>";
+                    }
+                    if (in_array('email', $visible_fields)) {
+                        $output .= ($email !== 'No Email' ? "<td><a href='mailto:$email'>$email</a></td>" : '<td></td>');
+                    }
+                    if (in_array('phone', $visible_fields)) {
+                        $output .= ($phone !== 'No Phone' ? "<td><a href='tel:" . preg_replace('/[^0-9+]/', '', $phone) . "'>$phone</a></td>" : '<td></td>');
+                    }
+                    $output .= '</tr>';
+                }
+                $output .= '</tbody></table></div>';
+                return $output;
+            }
+
+            // Card View (legacy, if view is not table)
             $output = '<div class="staff-directory">';
             foreach ($records as $record) {
                 $fields = isset($record['fields']) ? $record['fields'] : [];
@@ -200,7 +281,8 @@ class Airtable_Directory_Shortcodes {
             $atts = shortcode_atts(array(
                 'department' => '',
                 'show' => 'name,photo,address,phone,fax,hours',  // Added 'photo' to default
-                'show_map_link' => 'yes'  // New attribute to control map link display
+                'show_map_link' => 'yes',  // New attribute to control map link display
+                'show_staff' => 'true' // New attribute to control staff display
             ), $atts, 'department_details');
 
             if (empty($atts['department'])) {
@@ -210,6 +292,7 @@ class Airtable_Directory_Shortcodes {
             // Determine which fields to show in the output
             $visible_fields = array_map('trim', explode(',', strtolower($atts['show'])));
             $show_map_link = strtolower($atts['show_map_link']) === 'yes';
+            $show_staff = strtolower($atts['show_staff']) !== 'false';
 
             // Split comma-separated department IDs and clean them up
             $department_ids = array_map('trim', explode(',', $atts['department']));
@@ -358,6 +441,96 @@ class Airtable_Directory_Shortcodes {
                 }
 
                 $output .= '</div>';
+
+                // --- STAFF SECTION ---
+                if ($show_staff) {
+                    // Get employee IDs for this department
+                    $employee_ids = array();
+                    if (isset($fields['Employee IDs']) && is_array($fields['Employee IDs'])) {
+                        $employee_ids = $fields['Employee IDs'];
+                    }
+                    if (!empty($employee_ids)) {
+                        // Build filter formula for staff
+                        $filter_clauses = array();
+                        foreach ($employee_ids as $emp_id) {
+                            $filter_clauses[] = "{fldSsLnHmhFXPyJaj} = '" . $emp_id . "'";
+                        }
+                        $filter_formula = "OR(" . implode(',', $filter_clauses) . ")";
+                        $fields_to_fetch = array('Name', 'Title', 'Photo', 'Featured');
+                        $staff_query_params = array(
+                            'filterByFormula' => $filter_formula,
+                            'fields' => $fields_to_fetch
+                        );
+                        $staff_records = $this->api->fetch_data(AIRTABLE_STAFF_TABLE, $staff_query_params);
+                        if ($staff_records) {
+                            // Separate featured and regular staff
+                            $featured = array();
+                            $regular = array();
+                            foreach ($staff_records as $record) {
+                                $f = isset($record['fields']['Featured']) ? $record['fields']['Featured'] : false;
+                                if ($f === true || $f === '1' || $f === 1 || $f === 'true' || $f === 'checked') {
+                                    $featured[] = $record;
+                                } else {
+                                    $regular[] = $record;
+                                }
+                            }
+                            // Featured staff as cards
+                            if (!empty($featured)) {
+                                $output .= '<div class="department-featured-staff">';
+                                foreach ($featured as $record) {
+                                    $fields = isset($record['fields']) ? $record['fields'] : [];
+                                    $name  = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
+                                    $title = isset($fields['Title']) ? esc_html($fields['Title']) : 'No Title';
+                                    $photo_url = '';
+                                    if (isset($fields['Photo'])) {
+                                        if (is_array($fields['Photo']) && !empty($fields['Photo'])) {
+                                            if (isset($fields['Photo'][0]['url'])) {
+                                                $photo_url = esc_url($fields['Photo'][0]['url']);
+                                            } elseif (isset($fields['Photo'][0]['thumbnails']['large']['url'])) {
+                                                $photo_url = esc_url($fields['Photo'][0]['thumbnails']['large']['url']);
+                                            } elseif (isset($fields['Photo']['url'])) {
+                                                $photo_url = esc_url($fields['Photo']['url']);
+                                            } elseif (is_string($fields['Photo'][0])) {
+                                                $photo_url = esc_url($fields['Photo'][0]);
+                                            }
+                                        } elseif (is_string($fields['Photo'])) {
+                                            $photo_url = esc_url($fields['Photo']);
+                                        }
+                                    }
+                                    $output .= "<div class='staff-card'>";
+                                    $output .= "<div class='staff-photo-container'>";
+                                    if (!empty($photo_url)) {
+                                        $output .= "<img src='$photo_url' alt='Photo of $name' class='staff-photo'>";
+                                    } else {
+                                        $output .= "<div class='staff-photo no-photo'><span>No Photo</span></div>";
+                                    }
+                                    $output .= "</div>";
+                                    $output .= "<div class='staff-info'>";
+                                    $output .= "<strong>$name</strong><br>";
+                                    $output .= "$title<br>";
+                                    $output .= "</div></div>";
+                                }
+                                $output .= '</div>';
+                            }
+                            // Regular staff as simple blocks
+                            if (!empty($regular)) {
+                                $output .= '<div class="department-regular-staff">';
+                                $output .= '<h3>Staff</h3>';
+                                $output .= '<div class="staff-divider"></div>';
+                                $output .= '<div class="staff-block-list">';
+                                foreach ($regular as $record) {
+                                    $fields = isset($record['fields']) ? $record['fields'] : [];
+                                    $name  = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
+                                    $title = isset($fields['Title']) ? esc_html($fields['Title']) : 'No Title';
+                                    $output .= "<div class='staff-block'><strong class='staff-block-name'>$name</strong><br><span class='staff-block-title'>$title</span></div>";
+                                }
+                                $output .= '</div>';
+                                $output .= '</div>';
+                            }
+                        }
+                    }
+                }
+                // --- END STAFF SECTION ---
                 
                 $output .= '</div>'; // End individual department-details
                 

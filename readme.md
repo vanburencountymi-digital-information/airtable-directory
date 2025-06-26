@@ -21,6 +21,8 @@ Airtable Directory is a powerful WordPress plugin that pulls employee and depart
 - **NEW: Department photo support** - Display department photos alongside contact information
 - **NEW: Multiple department support** - Display multiple departments in a single shortcode
 - **NEW: Staff visibility control** - Public field allows department heads to control who appears in public directories
+- **NEW: Featured staff** - Staff with the 'Featured' field checked are highlighted as cards in department details
+- **NEW: Table or card view for staff directory** - Choose between a minimal table or card layout for staff directories
 - Displays staff members in responsive card and table layouts
 - Supports filtering by department using department IDs
 - Allows custom selection of visible fields (name, title, department, email, phone, photo)
@@ -77,7 +79,7 @@ Basic Usage:
 ```
 [staff_directory]
 ```
-Displays the full staff directory.
+Displays the full staff directory as a table (default).
 
 Filter by Department (using Department ID):
 ```
@@ -91,13 +93,20 @@ Control Displayed Fields:
 ```
 Only displays Name, Title, and Email for employees in the specified department.
 
+**Choose Table or Card View:**
+```
+[staff_directory department="recXXXXXXXXXXXX" view="card"]
+[staff_directory department="recXXXXXXXXXXXX" view="table"]
+```
+- `view`: Set to `table` (default) for a minimal table, or `card` for card-style layout.
+
 **Department Details**
 
 Display department information:
 ```
 [department_details department="recXXXXXXXXXXXX"]
 ```
-Shows details for the specified department.
+Shows details for the specified department, including staff members.
 
 Display Multiple Departments:
 ```
@@ -122,6 +131,19 @@ Control Map Links:
 [department_details department="recXXXXXXXXXXXX" show_map_link="no"]
 ```
 Use `show_map_link="no"` to hide the "View on Map" links for addresses. Default is "yes".
+
+**Show or Hide Staff in Department Details:**
+```
+[department_details department="recXXXXXXXXXXXX" show_staff="false"]
+```
+- `show_staff`: Set to `false` to hide staff members. Default is `true` (shows staff).
+- When shown, staff are split into two groups:
+  - **Featured staff** (with the 'Featured' field checked in Airtable) are displayed as cards with photo, name, and title.
+  - **Regular staff** are displayed as simple blocks with name and title.
+
+**Featured Staff**
+- Add a `Featured` checkbox field to your Staff table in Airtable.
+- Staff with this checked will appear as cards in department details; others will appear as simple blocks.
 
 **Searchable Staff Directory**
 
@@ -274,6 +296,12 @@ If your Staff table doesn't have a Public field, all staff members will be treat
 * Initial release
 * Fetches employee data from Airtable
 * Supports department filtering and dynamic field visibility
+
+= 2.3 =
+* **NEW:** Staff directory shortcode supports a 'view' attribute for table (default) or card layouts
+* **NEW:** Department details shortcode supports a 'show_staff' attribute (default true) to show/hide staff
+* **NEW:** Featured staff support in department details (displayed as cards)
+* Enhanced regular staff display in department details for clarity and style
 
 == Upgrade Notice ==
 
