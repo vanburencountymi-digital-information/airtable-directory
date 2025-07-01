@@ -811,4 +811,59 @@ class Airtable_Directory_Shortcodes {
             return '<p>An error occurred while retrieving the staff directory. Please try again later.</p>';
         }
     }
-} 
+}
+
+// === GLOBAL DEPARTMENT SHORTCODES FOR ELEMENTOR TEMPLATES ===
+if (!function_exists('airtable_directory_get_current_department_data')) {
+    function airtable_directory_get_current_department_data() {
+        $post_id = get_the_ID();
+        $dept_id = get_post_meta($post_id, 'department_id', true);
+        if (!$dept_id) return null;
+        global $airtable_directory_api;
+        if (!$airtable_directory_api) {
+            $airtable_directory_api = new Airtable_Directory_API();
+        }
+        $department = $airtable_directory_api->get_department_by_id($dept_id);
+        return ($department && !empty($department['fields'])) ? $department['fields'] : null;
+    }
+}
+
+add_shortcode('department_email', function () {
+    $fields = airtable_directory_get_current_department_data();
+    return $fields && isset($fields['Email']) ? esc_html($fields['Email']) : '';
+});
+add_shortcode('department_address', function () {
+    $fields = airtable_directory_get_current_department_data();
+    return $fields && isset($fields['Physical Address']) ? nl2br(esc_html($fields['Physical Address'])) : '';
+});
+add_shortcode('department_phone', function () {
+    $fields = airtable_directory_get_current_department_data();
+    return $fields && isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
+});
+add_shortcode('department_fax', function () {
+    $fields = airtable_directory_get_current_department_data();
+    return $fields && isset($fields['Fax']) ? esc_html($fields['Fax']) : '';
+});
+add_shortcode('department_hours', function () {
+    $fields = airtable_directory_get_current_department_data();
+    return $fields && isset($fields['Hours']) ? esc_html($fields['Hours']) : '';
+});
+add_shortcode('department_name', function () {
+    $fields = airtable_directory_get_current_department_data();
+    return $fields && isset($fields['Department Name']) ? esc_html($fields['Department Name']) : '';
+});
+add_shortcode('department_mailing_address', function () {
+    $fields = airtable_directory_get_current_department_data();
+    return $fields && isset($fields['Mailing Address']) ? nl2br(esc_html($fields['Mailing Address'])) : '';
+});
+add_shortcode('department_website', function () {
+    $fields = airtable_directory_get_current_department_data();
+    return $fields && isset($fields['Website']) ? esc_url($fields['Website']) : '';
+});
+add_shortcode('department_photo', function () {
+    $fields = airtable_directory_get_current_department_data();
+    if ($fields && isset($fields['Photo'][0]['url'])) {
+        return esc_url($fields['Photo'][0]['url']);
+    }
+    return '';
+}); 
