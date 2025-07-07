@@ -160,6 +160,61 @@ Options:
 - `show`: Fields to display (default: name,title,department,email,phone,photo)
 - `default_view`: Initial view to show (card or table, default: card)
 
+**Department Footer**
+
+Display department information in a clean footer layout:
+```
+[department_footer]
+```
+
+This shortcode automatically detects the current page's department_id and displays department information in a footer-style layout. If no department is found, it defaults to the administration building.
+
+**Multiple Department Support:**
+The shortcode supports multiple departments (comma-separated IDs) and displays them in a responsive column layout:
+```
+[department_footer department="5,8,12"]
+```
+
+Advanced Usage:
+```
+[department_footer department="5" show="name,address,phone" show_map_link="yes" show_staff="false"]
+```
+
+Options:
+- `department`: Specific department ID(s) to display (if empty, uses page's department_id or default)
+- `show`: Comma-separated list of fields to display (default: name,photo,address,phone,fax,hours)
+- `show_map_link`: Whether to show Google Maps links for addresses (default: yes)
+- `show_staff`: Whether to show staff members (default: true)
+- `default_department`: Department ID to use as fallback (default: 1 for Administration Building)
+
+Examples:
+```
+[department_footer show="name,phone,fax,hours"]
+[department_footer show_staff="false"]
+[department_footer department="3" show="name,address,phone"]
+[department_footer show_map_link="no"]
+[department_footer department="5,8,12" show="name,phone,hours"]
+```
+
+**Fallback Behavior:**
+1. If a `department` parameter is provided, it uses that department ID(s)
+2. If no department parameter is provided, it looks for a `department_id` custom field on the current page
+3. If no department_id is found on the page, it uses the `default_department` (defaults to "1" for Administration Building)
+4. If the department is not found in Airtable, it skips that department and continues with others
+
+**Multiple Department Layout:**
+When multiple departments are specified, they are displayed in a responsive grid layout:
+- Desktop: Departments appear in columns (auto-fit grid)
+- Mobile: Departments stack vertically
+- Each department gets its own card with contact information
+- Visual separators between departments for clarity
+
+Perfect for use in:
+- Page footers
+- Sidebar widgets  
+- Contact information sections
+- Department landing pages
+
 == Department Hierarchy ==
 
 The plugin automatically handles complex department structures:
@@ -258,6 +313,31 @@ Staff members without the Public field checked (or with it unchecked) will be co
 
 If your Staff table doesn't have a Public field, all staff members will be treated as non-public and will not appear in any directory displays. You must add the Public field and check it for staff members you want to be publicly visible.
 
+= How do I use the department footer shortcode? =
+
+The `[department_footer]` shortcode is perfect for displaying department contact information in page footers or sidebars. It automatically detects the current page's department_id and provides a clean footer layout.
+
+Basic usage:
+```
+[department_footer]
+```
+
+The shortcode will:
+1. Look for a `department_id` in the current page's custom fields
+2. If no department_id is found, use the default department (ID: 1 - Administration Building)
+3. Display the department information in a footer-style layout
+
+You can customize what's displayed:
+```
+[department_footer show="name,phone,fax,hours" show_staff="false"]
+```
+
+This is ideal for:
+- Page footers showing contact information
+- Sidebar widgets with department details
+- Contact sections on department pages
+- Any location where you want consistent department information display
+
 == Changelog ==
 
 = 2.2 =
@@ -302,6 +382,12 @@ If your Staff table doesn't have a Public field, all staff members will be treat
 * **NEW:** Department details shortcode supports a 'show_staff' attribute (default true) to show/hide staff
 * **NEW:** Featured staff support in department details (displayed as cards)
 * Enhanced regular staff display in department details for clarity and style
+
+= 2.4 =
+* **NEW:** Department footer shortcode for displaying department information in footer layouts
+* **NEW:** Automatic department detection from page custom fields with fallback to administration building
+* **NEW:** Clean footer styling with responsive design for mobile devices
+* Enhanced shortcode documentation with comprehensive examples and usage patterns
 
 == Upgrade Notice ==
 
