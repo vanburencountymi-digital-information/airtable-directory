@@ -919,7 +919,7 @@ class Airtable_Directory_Shortcodes {
                     $output .= '<div class="department-footer-header">';
                     $output .= '<div class="department-footer-title-row">';
                     $output .= '<div class="department-footer-title">';
-                    $output .= '<h2>Contact Us</h2>';
+                    $output .= '<h2 id="contact">Contact Us</h2>';
                     $output .= '<p class="department-name dekoline dekoline-small">' . $name . '</p>';
                     $output .= '</div>';
                     
