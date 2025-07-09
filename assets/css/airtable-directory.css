@@ -69,7 +69,6 @@
 }
 
 .department-details {
-    margin-bottom: 2em;
     padding: 20px;
 }
 .department-name {
@@ -93,7 +92,6 @@
 .physical-address h3, .mailing-address h3 {
     font-size: 1.1em;
     color: #555;
-    margin-bottom: 0.5em;
 }
 .department-contact {
     margin-bottom: 1em;

@@ -22,6 +22,50 @@ class Airtable_Directory_Department_Footer_Shortcode {
     }
     
     /**
+     * Get the department ID value by walking up the page hierarchy
+     * 
+     * This function walks up the page hierarchy until it finds a page that has
+     * a department_id meta field, then returns the department_id value.
+     * 
+     * @param int $post_id Optional. The post ID to start from. Defaults to current post.
+     * @return string|null The department_id value if found, null otherwise
+     */
+    function get_department_root_id($post_id = null) {
+        // If no post_id provided, use current post
+        if ($post_id === null) {
+            global $post;
+            if (!$post) {
+                return null;
+            }
+            $post_id = $post->ID;
+        }
+        
+        // Start with the current page
+        $current_id = $post_id;
+        
+        // Walk up the hierarchy until we find a department_id or reach the top
+        while ($current_id > 0) {
+            // Check if current page has department_id
+            $department_id = get_post_meta($current_id, 'department_id', true);
+            if (!empty($department_id)) {
+                return $department_id; // Return the department_id value
+            }
+            
+            // Get the parent page
+            $parent_id = wp_get_post_parent_id($current_id);
+            if ($parent_id === 0) {
+                // We've reached the top of the hierarchy
+                break;
+            }
+            
+            $current_id = $parent_id;
+        }
+        
+        // No department_id found in the entire hierarchy
+        return null;
+    }
+
+    /**
      * Department footer shortcode
      *
      * @param array $atts Shortcode attributes
@@ -31,7 +75,7 @@ class Airtable_Directory_Department_Footer_Shortcode {
         try {
             $atts = shortcode_atts(array(
                 'department' => '',
-                'show' => 'name,address,phone,fax,hours',
+                'show' => 'name,address,phone,fax,email,hours',
                 'show_map_link' => 'yes',
                 'show_staff' => 'true',
                 'default_department' => '1' // Default department ID for administration building
@@ -50,9 +94,9 @@ class Airtable_Directory_Department_Footer_Shortcode {
                 // Remove any empty values
                 $department_ids = array_filter($department_ids);
             } else {
-                // Try to get department_id from current page
+                // Try to get department_id by walking up the page hierarchy
                 $post_id = get_the_ID();
-                $page_dept_id = get_post_meta($post_id, 'department_id', true);
+                $page_dept_id = $this->get_department_root_id($post_id);
                 if (!empty($page_dept_id)) {
                     // Split comma-separated department IDs and clean them up
                     $department_ids = array_map('trim', explode(',', $page_dept_id));
@@ -100,6 +144,7 @@ class Airtable_Directory_Department_Footer_Shortcode {
                 $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No phone available';
                 $fax = isset($fields['Fax']) ? esc_html($fields['Fax']) : 'No fax available';
                 $hours = isset($fields['Hours']) ? esc_html($fields['Hours']) : 'No hours listed';
+                $email = isset($fields['Email']) ? esc_html($fields['Email']) : 'No email available';
                 
                 // Photo URL extraction logic (same as staff photos)
                 $photo_url = '';
@@ -182,25 +227,32 @@ class Airtable_Directory_Department_Footer_Shortcode {
                     $output .= '</div>';
                 }
                 
-                // Phone/Fax column
-                $phone_fax_content = '';
+                // Phone/Fax/Email column
+                $phone_fax_email_content = '';
                 if (in_array('phone', $visible_fields) && $phone !== 'No phone available') {
-                    $phone_fax_content .= '<div class="contact-item">';
-                    $phone_fax_content .= '<h3>Phone</h3>';
-                    $phone_fax_content .= '<p><a href="tel:' . preg_replace('/[^0-9+]/', '', $phone) . '">' . $phone . '</a></p>';
-                    $phone_fax_content .= '</div>';
+                    $phone_fax_email_content .= '<div class="contact-item">';
+                    $phone_fax_email_content .= '<h3>Phone</h3>';
+                    $phone_fax_email_content .= '<p><a href="tel:' . preg_replace('/[^0-9+]/', '', $phone) . '">' . $phone . '</a></p>';
+                    $phone_fax_email_content .= '</div>';
                 }
                 
                 if (in_array('fax', $visible_fields) && $fax !== 'No fax available') {
-                    $phone_fax_content .= '<div class="contact-item">';
-                    $phone_fax_content .= '<h3>Fax</h3>';
-                    $phone_fax_content .= '<p>' . $fax . '</p>';
-                    $phone_fax_content .= '</div>';
+                    $phone_fax_email_content .= '<div class="contact-item">';
+                    $phone_fax_email_content .= '<h3>Fax</h3>';
+                    $phone_fax_email_content .= '<p>' . $fax . '</p>';
+                    $phone_fax_email_content .= '</div>';
+                }
+
+                if (in_array('email', $visible_fields) && $email !== 'No email available') {
+                    $phone_fax_email_content .= '<div class="contact-item">';
+                    $phone_fax_email_content .= '<h3>Email</h3>';
+                    $phone_fax_email_content .= '<p><a href="mailto:' . $email . '">' . $email . '</a></p>';
+                    $phone_fax_email_content .= '</div>';
                 }
                 
-                if (!empty($phone_fax_content)) {
+                if (!empty($phone_fax_email_content)) {
                     $output .= '<div class="department-footer-column">';
-                    $output .= $phone_fax_content;
+                    $output .= $phone_fax_email_content;
                     $output .= '</div>';
                 }
                 
