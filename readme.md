@@ -126,6 +126,10 @@ Controls which fields are displayed. Available fields include:
 - `fax` - Fax number
 - `hours` - Business hours
 
+Set view:
+- `card` - Card style view
+- `table` - No extra class on department-details
+
 Control Map Links:
 ```
 [department_details department="recXXXXXXXXXXXX" show_map_link="no"]
