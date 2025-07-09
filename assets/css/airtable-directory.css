@@ -59,13 +59,18 @@
 }
 
 /* Department Details Styles */
-.department-details {
+.department-details.card{
     margin-bottom: 2em;
     padding: 20px;
     border: 1px solid #ddd;
     border-radius: 8px;
-    background-color: #f9f9f9;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    background-color: #fff;
+    box-shadow: rgba(0,0,0,0.4) 0px 2px 4px, rgba(0,0,0,0.3) 0px 7px 13px -3px, rgba(0,0,0,0.2) 0px -3px 0px inset;
+}
+
+.department-details {
+    margin-bottom: 2em;
+    padding: 20px;
 }
 .department-name {
     margin-bottom: 0.5em;

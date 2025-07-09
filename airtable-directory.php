@@ -87,15 +87,4 @@ function airtable_directory_deactivation() {
     error_log('Airtable Directory plugin deactivated');
 }
 
-// Register Elementor widget if Elementor is active
-function airtable_directory_register_elementor_widget( $widgets_manager ) {
-    if ( ! class_exists( '\Elementor\Widget_Base' ) ) {
-        return;
-    }
-    require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-elementor-staff-directory-widget.php';
-    $widgets_manager->register( new Airtable_Directory_Elementor_Staff_Directory_Widget() );
-    // Register Department Details widget
-    require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-elementor-department-details-widget.php';
-    $widgets_manager->register( new Airtable_Directory_Elementor_Department_Details_Widget() );
-}
-add_action( 'elementor/widgets/register', 'airtable_directory_register_elementor_widget' );
+
