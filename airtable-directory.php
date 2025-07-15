@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('AIRTABLE_DIRECTORY_VERSION', '2.2');
+define('AIRTABLE_DIRECTORY_VERSION', '2.5');
 define('AIRTABLE_DIRECTORY_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AIRTABLE_DIRECTORY_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -28,6 +28,8 @@ if (!defined('AIRTABLE_BASE_ID')) {
 // Table constants
 define('AIRTABLE_DEPARTMENT_TABLE', 'Departments');
 define('AIRTABLE_STAFF_TABLE', 'Staff');
+define('AIRTABLE_BOARDS_TABLE', 'tbl9tauYmY6X4gtWL');
+define('AIRTABLE_BOARD_MEMBERS_TABLE', 'tbl4b5yx3bgjXOudV');
 
 // Load required files
 require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-airtable-api.php';
@@ -87,15 +89,4 @@ function airtable_directory_deactivation() {
     error_log('Airtable Directory plugin deactivated');
 }
 
-// Register Elementor widget if Elementor is active
-function airtable_directory_register_elementor_widget( $widgets_manager ) {
-    if ( ! class_exists( '\Elementor\Widget_Base' ) ) {
-        return;
-    }
-    require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-elementor-staff-directory-widget.php';
-    $widgets_manager->register( new Airtable_Directory_Elementor_Staff_Directory_Widget() );
-    // Register Department Details widget
-    require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-elementor-department-details-widget.php';
-    $widgets_manager->register( new Airtable_Directory_Elementor_Department_Details_Widget() );
-}
-add_action( 'elementor/widgets/register', 'airtable_directory_register_elementor_widget' );
+
