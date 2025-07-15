@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('AIRTABLE_DIRECTORY_VERSION', '2.2');
+define('AIRTABLE_DIRECTORY_VERSION', '2.5');
 define('AIRTABLE_DIRECTORY_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AIRTABLE_DIRECTORY_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -28,6 +28,8 @@ if (!defined('AIRTABLE_BASE_ID')) {
 // Table constants
 define('AIRTABLE_DEPARTMENT_TABLE', 'Departments');
 define('AIRTABLE_STAFF_TABLE', 'Staff');
+define('AIRTABLE_BOARDS_TABLE', 'tbl9tauYmY6X4gtWL');
+define('AIRTABLE_BOARD_MEMBERS_TABLE', 'tbl4b5yx3bgjXOudV');
 
 // Load required files
 require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-airtable-api.php';

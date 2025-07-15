@@ -37,7 +37,10 @@ class Airtable_Directory_Shortcodes {
             'class-staff-directory-shortcode.php',
             'class-department-details-shortcode.php',
             'class-searchable-staff-directory-shortcode.php',
-            'class-department-footer-shortcode.php'
+            'class-department-footer-shortcode.php',
+            'class-boards-directory-shortcode.php',
+            'class-board-members-shortcode.php',
+            'class-board-details-shortcode.php'
         );
         
         // Load each shortcode file
@@ -53,6 +56,9 @@ class Airtable_Directory_Shortcodes {
         $this->shortcodes['department_details'] = new Airtable_Directory_Department_Details_Shortcode($this->api);
         $this->shortcodes['searchable_staff_directory'] = new Airtable_Directory_Searchable_Staff_Shortcode($this->api);
         $this->shortcodes['department_footer'] = new Airtable_Directory_Department_Footer_Shortcode($this->api);
+        $this->shortcodes['boards_directory'] = new Airtable_Directory_Boards_Shortcode($this->api);
+        $this->shortcodes['board_members'] = new Airtable_Directory_Board_Members_Shortcode($this->api);
+        $this->shortcodes['board_details'] = new Airtable_Directory_Board_Details_Shortcode($this->api);
     }
     
     /**

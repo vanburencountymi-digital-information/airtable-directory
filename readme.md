@@ -4,7 +4,7 @@ Tags: airtable, directory, staff, shortcode, custom directory, department pages,
 Requires at least: 5.0
 Tested up to: 6.4
 Requires PHP: 7.4
-Stable tag: 2.2
+Stable tag: 2.5
 License: MIT
 
 A comprehensive WordPress plugin to display staff directories using data from Airtable. Features department pages, employee profiles, hierarchy support, customizable field visibility, and department photo displays.
@@ -15,6 +15,7 @@ Airtable Directory is a powerful WordPress plugin that pulls employee and depart
 
 **Key Features:**
 - Fetches employee and department data from Airtable
+- **NEW: Boards & Commissions Support** - Display boards, committees, and board members from Airtable
 - **NEW: Directory Pages** - Automatic `/directory/` pages with department and employee profiles
 - **NEW: URL-friendly slugs** - Clean URLs like `/directory/human-resources/` and `/directory/john-smith/`
 - **NEW: Department hierarchy support** - Parent/child department relationships with nested staff displays
@@ -219,6 +220,102 @@ Perfect for use in:
 - Contact information sections
 - Department landing pages
 
+== Boards & Commissions Shortcodes ==
+
+**Boards Directory**
+
+Display all boards and committees:
+```
+[boards_directory]
+```
+
+Filter by specific board:
+```
+[boards_directory board="recXXXXXXXXXXXX"]
+```
+
+Control displayed fields:
+```
+[boards_directory show="name,logo,contact_info,meeting_location,meeting_time,member_count"]
+```
+
+Choose view type:
+```
+[boards_directory view="table"]
+[boards_directory view="card"]
+```
+
+Available fields:
+- `name` - Board name
+- `logo` - Board logo/image
+- `contact_info` - Contact information
+- `meeting_location` - Meeting location
+- `meeting_time` - Meeting time
+- `member_count` - Number of board members
+
+**Board Members**
+
+Display board members for a specific board (using ID number or record ID):
+```
+[board_members board="1"]
+[board_members board="recXXXXXXXXXXXX"]
+```
+
+Control displayed fields:
+```
+[board_members board="1" show="name,role,representative_type,notes"]
+```
+
+Choose view type:
+```
+[board_members board="1" view="table"]
+[board_members board="1" view="card"]
+```
+
+Available fields:
+- `name` - Member name
+- `role` - Role on board
+- `representative_type` - Representative type
+- `notes` - Additional notes
+
+**Board Details**
+
+Display detailed information about a specific board (using ID number or record ID):
+```
+[board_details board="1"]
+[board_details board="recXXXXXXXXXXXX"]
+```
+
+Control displayed fields:
+```
+[board_details board="1" show="name,logo,contact_info,meeting_location,meeting_time,members"]
+```
+
+Choose view type:
+```
+[board_details board="1" view="card"]
+[board_details board="1" view="table"]
+```
+
+Control member display:
+```
+[board_details board="1" show_members="false"]
+```
+
+Available fields:
+- `name` - Board name
+- `logo` - Board logo/image
+- `contact_info` - Contact information
+- `meeting_location` - Meeting location
+- `meeting_time` - Meeting time
+- `members` - Board members list
+
+**Board Member Display Options:**
+- When `show_members="true"` (default), board members are displayed as cards with photos, names, roles, and contact information
+- When `view="table"`, board members are listed in a simple table format
+- Board member photos are displayed as circular thumbnails
+- Contact information (email/phone) is automatically linked for easy access
+
 == Department Hierarchy ==
 
 The plugin automatically handles complex department structures:
@@ -342,6 +439,46 @@ This is ideal for:
 - Contact sections on department pages
 - Any location where you want consistent department information display
 
+= How do I find my board IDs? =
+
+You can use either the simple ID number or the Airtable record ID:
+
+**Simple ID (Recommended):**
+- Open your Airtable base and navigate to the Boards & Committees table
+- Look at the "ID" column (auto-incrementing number)
+- Use this number in your shortcodes: `[board_details board="1"]`
+
+**Record ID:**
+- The record ID is visible in the URL when you select a record in Airtable
+- Or you can use the Airtable API documentation to see all record IDs
+- Use the full record ID: `[board_details board="recXXXXXXXXXXXX"]`
+
+The plugin automatically detects whether you're using a simple ID number or a record ID, so both formats work seamlessly.
+
+= How do I add board logos? =
+
+Ensure your Airtable Boards & Committees table has a Logo field that stores attachments. The plugin will automatically pull the image URL and display logos in board cards, detail pages, and shortcodes when the 'logo' field is included in the 'show' parameter.
+
+= How do I add board member photos? =
+
+Ensure your Airtable Board Members table has a Photo field that stores attachments. The plugin will automatically pull the image URL and display photos in cards, tables, and board member displays.
+
+= Can I display multiple boards in one shortcode? =
+
+Currently, the boards directory shortcode displays all boards when no specific board is specified. For more granular control, you can use individual board_details shortcodes for specific boards.
+
+= How do I control which board fields are shown? =
+
+Use the 'show' parameter to specify which fields to display:
+```
+[boards_directory show="name,logo,contact_info,meeting_location"]
+```
+Available fields: name, logo, contact_info, meeting_location, meeting_time, member_count
+
+= What happens if a board field is missing? =
+
+If a board or board member is missing data for a field, the plugin will gracefully handle it and not display empty fields.
+
 == Changelog ==
 
 = 2.2 =
@@ -392,6 +529,17 @@ This is ideal for:
 * **NEW:** Automatic department detection from page custom fields with fallback to administration building
 * **NEW:** Clean footer styling with responsive design for mobile devices
 * Enhanced shortcode documentation with comprehensive examples and usage patterns
+
+= 2.5 =
+* **NEW:** Boards & Commissions support with three new shortcodes
+* **NEW:** `[boards_directory]` shortcode for displaying all boards and committees
+* **NEW:** `[board_members]` shortcode for displaying board members with table/card views
+* **NEW:** `[board_details]` shortcode for detailed board information with member lists
+* **NEW:** Support for board logos, contact information, meeting details, and member photos
+* **NEW:** Responsive CSS styling for all board components
+* **NEW:** Table and card view options for all board shortcodes
+* Enhanced API class with board-specific methods for data retrieval
+* Updated documentation with comprehensive boards & commissions examples
 
 == Upgrade Notice ==
 

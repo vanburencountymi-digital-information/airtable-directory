@@ -77,12 +77,15 @@ class Airtable_Directory_Admin {
                 <h2>Usage Information</h2>
                 
                 <h3>Shortcodes</h3>
-                <p>You can still use the existing shortcodes on any page or post:</p>
+                <p>You can use these shortcodes on any page or post:</p>
                 <ul>
                     <li><code>[staff_directory]</code> - Display all staff members</li>
                     <li><code>[staff_directory department="recXXXXXXXXXXXX"]</code> - Display staff from specific department</li>
                     <li><code>[department_details department="recXXXXXXXXXXXX"]</code> - Display department information</li>
                     <li><code>[searchable_staff_directory]</code> - Display searchable staff directory with filters</li>
+                    <li><code>[boards_directory]</code> - Display all boards and committees</li>
+                    <li><code>[board_members board="1"]</code> - Display board members for specific board</li>
+                    <li><code>[board_details board="1"]</code> - Display detailed board information</li>
                 </ul>
                 
                 <h3>Directory Pages</h3>
@@ -122,6 +125,12 @@ class Airtable_Directory_Admin {
             echo '<div class="notice notice-success"><p>Directory cache cleared successfully!</p></div>';
         }
         
+        // Check if board cache was cleared
+        if (isset($_POST['clear_board_cache']) && check_admin_referer('airtable_directory_clear_board_cache')) {
+            $this->api->clear_board_cache();
+            echo '<div class="notice notice-success"><p>Board cache cleared successfully!</p></div>';
+        }
+        
         // Check if rewrite rules were flushed
         if (isset($_POST['flush_rewrite_rules']) && check_admin_referer('airtable_directory_flush_rewrite')) {
             flush_rewrite_rules();
@@ -147,6 +156,8 @@ class Airtable_Directory_Admin {
                                         <option value="">All Tables</option>
                                         <option value="<?php echo AIRTABLE_DEPARTMENT_TABLE; ?>">Departments</option>
                                         <option value="<?php echo AIRTABLE_STAFF_TABLE; ?>">Staff</option>
+                                        <option value="<?php echo AIRTABLE_BOARDS_TABLE; ?>">Boards & Committees</option>
+                                        <option value="<?php echo AIRTABLE_BOARD_MEMBERS_TABLE; ?>">Board Members</option>
                                     </select>
                                     <p class="description">Select which table's cache to clear, or leave blank to clear all.</p>
                                 </td>
@@ -170,6 +181,20 @@ class Airtable_Directory_Admin {
                             <input type="submit" name="clear_directory_cache" class="button button-secondary" value="Clear Directory Cache">
                         </p>
                         <p class="description">This clears slug mappings and forces regeneration of directory URLs.</p>
+                    </form>
+                </div>
+                
+                <!-- Board-Specific Cache Section -->
+                <div class="admin-section">
+                    <h2>Board Cache Management</h2>
+                    <p>Clear board and committee related caches including board data and member information.</p>
+                    
+                    <form method="post" action="" style="margin-bottom: 20px;">
+                        <?php wp_nonce_field('airtable_directory_clear_board_cache'); ?>
+                        <p class="submit">
+                            <input type="submit" name="clear_board_cache" class="button button-secondary" value="Clear Board Cache">
+                        </p>
+                        <p class="description">This clears all board and board member data caches.</p>
                     </form>
                 </div>
                 
