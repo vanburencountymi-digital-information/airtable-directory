@@ -608,4 +608,105 @@ class Airtable_Directory_API {
         
         error_log('Cleared all board-related caches');
     }
+
+    /**
+     * Add a new record to Airtable
+     *
+     * @param string $table_id Table ID
+     * @param array $fields Array of field data (field name => value)
+     * @return array|false Record data on success, false on failure
+     */
+    public function add_record($table_id, $fields) {
+        $api_key = AIRTABLE_API_KEY;
+        $base_id = AIRTABLE_BASE_ID;
+        
+        $url = "https://api.airtable.com/v0/" . $base_id . "/" . urlencode($table_id);
+        
+        $data = array(
+            'fields' => $fields
+        );
+        
+        $args = array(
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type'  => 'application/json'
+            ),
+            'body' => json_encode($data),
+            'method' => 'POST'
+        );
+        
+        $response = wp_remote_post($url, $args);
+        
+        if (is_wp_error($response)) {
+            error_log('Airtable API Error (add_record): ' . $response->get_error_message());
+            return false;
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $result = json_decode($body, true);
+        
+        if (wp_remote_retrieve_response_code($response) === 200 && isset($result['id'])) {
+            error_log('Airtable record created successfully: ' . $result['id']);
+            return $result;
+        } else {
+            error_log('Airtable API Error (add_record): ' . $body);
+            return false;
+        }
+    }
+    
+    /**
+     * Update an existing record in Airtable
+     *
+     * @param string $table_id Table ID
+     * @param string $record_id Record ID to update
+     * @param array $fields Array of field data (field name => value)
+     * @return array|false Record data on success, false on failure
+     */
+    public function update_record($table_id, $record_id, $fields) {
+        $api_key = AIRTABLE_API_KEY;
+        $base_id = AIRTABLE_BASE_ID;
+        
+        $url = "https://api.airtable.com/v0/" . $base_id . "/" . urlencode($table_id) . "/" . urlencode($record_id);
+        
+        $data = array(
+            'fields' => $fields
+        );
+        
+        $args = array(
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type'  => 'application/json'
+            ),
+            'body' => json_encode($data),
+            'method' => 'PATCH'
+        );
+        
+        $response = wp_remote_request($url, $args);
+        
+        if (is_wp_error($response)) {
+            error_log('Airtable API Error (update_record): ' . $response->get_error_message());
+            return false;
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $result = json_decode($body, true);
+        
+        if (wp_remote_retrieve_response_code($response) === 200 && isset($result['id'])) {
+            error_log('Airtable record updated successfully: ' . $result['id']);
+            return $result;
+        } else {
+            error_log('Airtable API Error (update_record): ' . $body);
+            return false;
+        }
+    }
+    
+    /**
+     * Clear cache for a specific table after updates
+     *
+     * @param string $table_id Table ID
+     */
+    public function clear_table_cache($table_id) {
+        $this->clear_cache($table_id);
+        error_log('Cleared cache for table: ' . $table_id);
+    }
 } 
