@@ -383,7 +383,9 @@ class Airtable_Directory_Admin {
             }
         }
         $mapping_submitted = isset($_POST['field_mapping_submit']);
-        $field_mapping = isset($_POST['field_mapping']) && is_array($_POST['field_mapping']) ? array_map('sanitize_text_field', $_POST['field_mapping']) : array();
+        $field_mapping = isset($_POST['field_mapping']) && is_array($_POST['field_mapping']) ? $_POST['field_mapping'] : array();
+        error_log('[Airtable Directory] Raw POST field_mapping: ' . print_r($_POST['field_mapping'] ?? array(), true));
+        error_log('[Airtable Directory] field_mapping: ' . print_r($field_mapping, true));
         // Hard-coded Staff table schema (field name => field id)
         $staff_table_id = 'tblGUYaSR3ePqIDGK';
         $airtable_fields = array(
@@ -403,16 +405,59 @@ class Airtable_Directory_Admin {
             'Biography'        => 'fldNBRNOYGw95nBe9',
         );
         $airtable_field_labels = array_keys($airtable_fields);
-        // Fetch staff records for matching if mapping submitted
-        $staff_lookup = array();
-        if ($mapping_submitted && !empty($field_mapping)) {
-            $staff_records = $this->api->fetch_data($staff_table_id, array('fields' => $airtable_fields));
-            foreach ($staff_records as $record) {
-                $fields = isset($record['fields']) ? $record['fields'] : array();
-                if (!empty($fields['Name'])) {
-                    $staff_lookup[strtolower(trim($fields['Name']))] = $fields;
+        $name_field_name = 'Name';
+        $name_field_id = $airtable_fields[$name_field_name];
+        // Helper for normalization
+        function normalize_name($name) {
+            $name = preg_replace('/[\x{00A0}\x{200B}\x{200C}\x{200D}\x{FEFF}]/u', '', $name);
+            $name = trim($name);
+            $name = strtolower($name);
+            return $name;
+        }
+        // Decode field mapping from POST (if present)
+        $decoded_field_mapping = array();
+        if (!empty($field_mapping)) {
+            foreach ($field_mapping as $i => $map_json) {
+                error_log('[Airtable Directory] Processing map_json for index ' . $i . ': ' . $map_json);
+                // Try to decode as-is first
+                $decoded = json_decode($map_json, true);
+                // If that fails, try unescaping quotes
+                if ($decoded === null && !empty($map_json)) {
+                    $unescaped = str_replace('\"', '"', $map_json);
+                    $decoded = json_decode($unescaped, true);
+                    error_log('[Airtable Directory] Unescaped JSON: ' . $unescaped);
+                }
+                error_log('[Airtable Directory] Decoded result: ' . print_r($decoded, true));
+                if (is_array($decoded)) {
+                    $decoded_field_mapping[$i] = $decoded;
                 }
             }
+            error_log('[Airtable Directory] Final decoded field mapping: ' . print_r($decoded_field_mapping, true));
+        } else {
+            error_log('[Airtable Directory] field_mapping is empty');
+        }
+        // Fetch staff records for matching if mapping submitted
+        $staff_lookup = array();
+        if ($mapping_submitted && !empty($decoded_field_mapping)) {
+            $staff_records = $this->api->fetch_data($staff_table_id, array('fields' => array_values($airtable_fields)));
+            error_log('[Airtable Directory] Number of Airtable staff records: ' . count($staff_records));
+            if (!empty($staff_records)) {
+                error_log('[Airtable Directory] Example Airtable record: ' . print_r($staff_records[0], true));
+            }
+            $debug_airtable_names = array();
+            foreach ($staff_records as $record) {
+                $fields = isset($record['fields']) ? $record['fields'] : array();
+                if (!array_key_exists($name_field_name, $fields)) {
+                    error_log('[Airtable Directory] Name field "' . $name_field_name . '" missing in record: ' . print_r($fields, true));
+                }
+                if (!empty($fields[$name_field_name])) {
+                    $norm_name = normalize_name($fields[$name_field_name]);
+                    error_log('[Airtable Directory] Airtable staff name: "' . $fields[$name_field_name] . '" | Normalized: "' . $norm_name . '"');
+                    $staff_lookup[$norm_name] = $fields;
+                    $debug_airtable_names[] = $norm_name;
+                }
+            }
+            error_log('[Airtable Directory] All normalized Airtable names: ' . print_r($debug_airtable_names, true));
         }
         ?>
         <div class="wrap">
@@ -472,7 +517,8 @@ class Airtable_Directory_Admin {
                                             <select name="field_mapping[<?php echo esc_attr($i); ?>]">
                                                 <option value="">-- Ignore --</option>
                                                 <?php foreach ($airtable_field_labels as $af_label): ?>
-                                                    <option value="<?php echo esc_attr($airtable_fields[$af_label]); ?>" <?php if (strtolower($col) === strtolower($af_label)) echo 'selected'; ?>><?php echo esc_html($af_label); ?></option>
+                                                    <?php $map = array('name' => $af_label, 'id' => $airtable_fields[$af_label]); ?>
+                                                    <option value='<?php echo esc_attr(json_encode($map)); ?>' <?php if (strtolower($col) === strtolower($af_label)) echo 'selected'; ?>><?php echo esc_html($af_label); ?></option>
                                                 <?php endforeach; ?>
                                             </select>
                                         </td>
@@ -484,7 +530,7 @@ class Airtable_Directory_Admin {
                     </form>
                 <?php endif; ?>
             <?php endif; ?>
-            <?php if ($mapping_submitted && !empty($field_mapping) && !empty($csv_header)):
+            <?php if ($mapping_submitted && !empty($decoded_field_mapping) && !empty($csv_header)):
                 // Build match stats
                 $matched = 0;
                 $unmatched = 0;
@@ -492,13 +538,17 @@ class Airtable_Directory_Admin {
                 $unmatched_rows = array();
                 foreach ($csv_preview as $row) {
                     $csv_name = '';
-                    foreach ($field_mapping as $i => $af_id) {
-                        if ($af_id === 'fldQXuUUco3ZRRol2') { // Name field
+                    $csv_name_field_index = null;
+                    foreach ($decoded_field_mapping as $i => $map) {
+                        if (isset($map['name']) && $map['name'] === $name_field_name) {
                             $csv_name = isset($row[$i]) ? $row[$i] : '';
+                            $csv_name_field_index = $i;
                             break;
                         }
                     }
-                    if ($csv_name && isset($staff_lookup[strtolower(trim($csv_name))])) {
+                    $norm_csv_name = normalize_name($csv_name);
+                    error_log('[Airtable Directory] CSV name: "' . $csv_name . '" | Normalized: "' . $norm_csv_name . '"');
+                    if ($norm_csv_name && isset($staff_lookup[$norm_csv_name])) {
                         $matched++;
                     } else {
                         $unmatched++;
@@ -521,8 +571,9 @@ class Airtable_Directory_Admin {
                     <form method="post" style="margin-top:2em;">
                         <?php wp_nonce_field('airtable_directory_csv_addnew'); ?>
                         <input type="hidden" name="selected_csv" value="<?php echo esc_attr($selected_csv); ?>">
-                        <?php foreach ($field_mapping as $i => $af_id): ?>
-                            <input type="hidden" name="field_mapping[<?php echo esc_attr($i); ?>]" value="<?php echo esc_attr($af_id); ?>">
+                        <?php foreach ($field_mapping as $i => $map_json): ?>
+                            <?php $map = json_decode($map_json, true); ?>
+                            <input type="hidden" name="field_mapping[<?php echo esc_attr($i); ?>]" value="<?php echo esc_attr(json_encode($map)); ?>">
                         <?php endforeach; ?>
                         <h3>Review Unmatched Names</h3>
                         <div style="overflow-x:auto; max-width:100%;">
@@ -538,8 +589,8 @@ class Airtable_Directory_Admin {
                             <tbody>
                                 <?php foreach ($unmatched_rows as $row):
                                     $csv_name = '';
-                                    foreach ($field_mapping as $i => $af_id) {
-                                        if ($af_id === 'fldQXuUUco3ZRRol2') { // Name field
+                                    foreach ($decoded_field_mapping as $i => $map) {
+                                        if (isset($map['name']) && $map['name'] === $name_field_name) {
                                             $csv_name = isset($row[$i]) ? $row[$i] : '';
                                             break;
                                         }
