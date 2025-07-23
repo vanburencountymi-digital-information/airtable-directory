@@ -58,6 +58,16 @@ class Airtable_Directory_Admin {
             'airtable-directory-display-settings',
             array($this, 'display_settings_page')
         );
+
+        // CSV Staff Import/Update submenu
+        add_submenu_page(
+            'airtable-directory',
+            'CSV Staff Import/Update',
+            'CSV Staff Import/Update',
+            'manage_options',
+            'airtable-directory-csv-import',
+            array($this, 'csv_import_page')
+        );
     }
     
     /**
@@ -337,5 +347,81 @@ class Airtable_Directory_Admin {
             </label><br>
             <?php
         }
+    }
+
+    /**
+     * CSV Staff Import/Update page
+     */
+    public function csv_import_page() {
+        $data_dir = plugin_dir_path(__DIR__) . 'data/';
+        $data_url = plugin_dir_url(__DIR__) . 'data/';
+        $csv_files = array();
+        if (is_dir($data_dir)) {
+            $files = scandir($data_dir);
+            foreach ($files as $file) {
+                if (preg_match('/\.csv$/i', $file)) {
+                    $csv_files[] = $file;
+                }
+            }
+        }
+        $selected_csv = isset($_POST['selected_csv']) ? sanitize_text_field($_POST['selected_csv']) : '';
+        $csv_preview = array();
+        $csv_header = array();
+        if ($selected_csv && in_array($selected_csv, $csv_files)) {
+            $csv_path = $data_dir . $selected_csv;
+            if (($handle = fopen($csv_path, 'r')) !== false) {
+                $row = 0;
+                while (($data = fgetcsv($handle, 10000, ',')) !== false && $row < 21) {
+                    if ($row === 0) {
+                        $csv_header = $data;
+                    } else {
+                        $csv_preview[] = $data;
+                    }
+                    $row++;
+                }
+                fclose($handle);
+            }
+        }
+        ?>
+        <div class="wrap">
+            <h1>CSV Staff Import/Update</h1>
+            <p>Select a CSV file from the <code>data</code> directory to preview and process staff updates.</p>
+            <form method="post">
+                <?php wp_nonce_field('airtable_directory_csv_preview'); ?>
+                <label for="selected_csv"><strong>CSV File:</strong></label>
+                <select name="selected_csv" id="selected_csv">
+                    <option value="">-- Select a CSV file --</option>
+                    <?php foreach ($csv_files as $file): ?>
+                        <option value="<?php echo esc_attr($file); ?>" <?php selected($selected_csv, $file); ?>><?php echo esc_html($file); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <input type="submit" class="button button-primary" value="Preview">
+            </form>
+            <?php if ($selected_csv && !empty($csv_header)): ?>
+                <h2>Preview: <?php echo esc_html($selected_csv); ?></h2>
+                <div style="overflow-x:auto; max-width:100%;">
+                <table class="widefat fixed striped">
+                    <thead>
+                        <tr>
+                            <?php foreach ($csv_header as $col): ?>
+                                <th><?php echo esc_html($col); ?></th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($csv_preview as $row): ?>
+                            <tr>
+                                <?php foreach ($row as $cell): ?>
+                                    <td><?php echo esc_html($cell); ?></td>
+                                <?php endforeach; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                </div>
+                <p><em>Showing first <?php echo count($csv_preview); ?> rows. Only a preview; no changes have been made.</em></p>
+            <?php endif; ?>
+        </div>
+        <?php
     }
 } 
