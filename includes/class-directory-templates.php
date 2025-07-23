@@ -70,15 +70,15 @@ class Airtable_Directory_Templates {
                     
                     foreach ($departments as $dept) {
                         $fields = isset($dept['fields']) ? $dept['fields'] : array();
-                        $parent_id = isset($fields['Parent ID']) ? $fields['Parent ID'] : '';
+                        $parent_dept = isset($fields['Parent Department']) ? $fields['Parent Department'] : '';
                         
-                        if (empty($parent_id)) {
+                        if (empty($parent_dept)) {
                             $parent_departments[] = $dept;
                         } else {
-                            if (!isset($child_departments[$parent_id])) {
-                                $child_departments[$parent_id] = array();
+                            if (!isset($child_departments[$parent_dept])) {
+                                $child_departments[$parent_dept] = array();
                             }
-                            $child_departments[$parent_id][] = $dept;
+                            $child_departments[$parent_dept][] = $dept;
                         }
                     }
                     
@@ -114,7 +114,7 @@ class Airtable_Directory_Templates {
         
         switch ($resolved['type']) {
             case 'department':
-                $this->render_department_page($resolved['id'], $resolved['name']);
+                $this->render_department_page($resolved['name']);
                 break;
                 
             case 'employee':
@@ -133,7 +133,7 @@ class Airtable_Directory_Templates {
      * @param string|int $department_id Department ID number
      * @param string $department_name Department name
      */
-    public function render_department_page($department_id, $department_name) {
+    public function render_department_page($department_name) {
         $this->setup_directory_page($department_name, "Department information and staff directory");
         
         ob_start();
@@ -145,21 +145,21 @@ class Airtable_Directory_Templates {
             </div>
             
             <?php
-            error_log("Rendering department page for ID: " . $department_id . " Name: " . $department_name);
+            error_log("Rendering department page for Name: " . $department_name);
             
             // Get department data for details display
-            $department_data = $this->api->get_department_by_id($department_id);
+            $department_data = $this->api->get_department_by_name($department_name);
             if ($department_data) {
                 $this->render_department_details($department_data);
             } else {
                 echo '<p>Department details not found.</p>';
-                error_log("Department data not found for ID: " . $department_id);
+                error_log("Department data not found for Name: " . $department_name);
             }
             
             // Show staff members in this department
             echo '<h3>Staff Members</h3>';
-            $staff_members = $this->api->get_staff_by_department($department_id);
-            error_log("Found " . count($staff_members) . " staff members for department " . $department_id);
+            $staff_members = $this->api->get_staff_by_department($department_name);
+            error_log("Found " . count($staff_members) . " staff members for department " . $department_name);
             
             if ($staff_members && count($staff_members) > 0) {
                 $this->render_staff_grid($staff_members);
@@ -168,18 +168,17 @@ class Airtable_Directory_Templates {
             }
             
             // Show child departments if any
-            $child_departments = $this->api->get_child_departments($department_id);
-            error_log("Found " . count($child_departments) . " child departments for department " . $department_id);
+            $child_departments = $this->api->get_child_departments($department_name);
+            error_log("Found " . count($child_departments) . " child departments for department " . $department_name);
             
             if (!empty($child_departments)) {
                 echo '<h3>Sub-Departments</h3>';
                 
                 foreach ($child_departments as $child_dept) {
                     $child_fields = isset($child_dept['fields']) ? $child_dept['fields'] : array();
-                    $child_id = isset($child_fields['Department ID']) ? $child_fields['Department ID'] : '';
                     $child_name = isset($child_fields['Department Name']) ? $child_fields['Department Name'] : 'Unknown Department';
                     
-                    if (!empty($child_id)) {
+                    if (!empty($child_name)) {
                         echo '<div class="child-department-section">';
                         
                         // Department details for child
@@ -187,7 +186,7 @@ class Airtable_Directory_Templates {
                         
                         // Staff in child department
                         echo '<h4>' . esc_html($child_name) . ' Staff</h4>';
-                        $child_staff = $this->api->get_staff_by_department($child_id);
+                        $child_staff = $this->api->get_staff_by_department($child_name);
                         if ($child_staff && count($child_staff) > 0) {
                             $this->render_staff_grid($child_staff);
                         } else {
@@ -379,7 +378,17 @@ class Airtable_Directory_Templates {
                 $fields = isset($employee['fields']) ? $employee['fields'] : array();
                 $name = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
                 $title = isset($fields['Title']) ? esc_html($fields['Title']) : '';
-                $dept = isset($fields['Department']) ? esc_html($fields['Department']) : '';
+                $dept = '';
+                if (isset($fields['Departments']) && is_array($fields['Departments'])) {
+                    $department_names = array();
+                    foreach ($fields['Departments'] as $dept_record_id) {
+                        $dept_record = $this->api->get_department_by_record_id($dept_record_id);
+                        if ($dept_record && isset($dept_record['fields']['Department Name'])) {
+                            $department_names[] = $dept_record['fields']['Department Name'];
+                        }
+                    }
+                    $dept = !empty($department_names) ? implode(', ', $department_names) : '';
+                }
                 $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
                 $email = isset($fields['Email']) ? esc_html($fields['Email']) : '';
                 $emp_slug = $this->routes->generate_slug($name);
@@ -453,7 +462,17 @@ class Airtable_Directory_Templates {
                     $fields = isset($employee['fields']) ? $employee['fields'] : array();
                     $name = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
                     $title = isset($fields['Title']) ? esc_html($fields['Title']) : '';
-                    $dept = isset($fields['Department']) ? esc_html($fields['Department']) : '';
+                    $dept = '';
+                    if (isset($fields['Departments']) && is_array($fields['Departments'])) {
+                        $department_names = array();
+                        foreach ($fields['Departments'] as $dept_record_id) {
+                            $dept_record = $this->api->get_department_by_record_id($dept_record_id);
+                            if ($dept_record && isset($dept_record['fields']['Department Name'])) {
+                                $department_names[] = $dept_record['fields']['Department Name'];
+                            }
+                        }
+                        $dept = !empty($department_names) ? implode(', ', $department_names) : '';
+                    }
                     $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
                     $email = isset($fields['Email']) ? esc_html($fields['Email']) : '';
                     $emp_slug = $this->routes->generate_slug($name);
@@ -566,10 +585,10 @@ class Airtable_Directory_Templates {
         $dept_url = home_url('/directory/' . $dept_slug . '/');
         
         // Count staff in this department
-        $staff_count = $this->api->get_department_staff_count($dept_id);
+        $staff_count = $this->api->get_department_staff_count($dept_name);
         
         // Count child departments
-        $child_count = isset($child_departments[$dept_id]) ? count($child_departments[$dept_id]) : 0;
+        $child_count = isset($child_departments[$dept_name]) ? count($child_departments[$dept_name]) : 0;
         
         // Photo URL extraction logic (same as staff photos)
         $photo_url = '';
@@ -610,11 +629,11 @@ class Airtable_Directory_Templates {
                     <?php endif; ?>
                 </div>
                 
-                <?php if (isset($child_departments[$dept_id])): ?>
+                <?php if (isset($child_departments[$dept_name])): ?>
                     <div class="child-departments">
                         <strong>Sub-departments:</strong>
                         <ul>
-                            <?php foreach ($child_departments[$dept_id] as $child): ?>
+                            <?php foreach ($child_departments[$dept_name] as $child): ?>
                                 <?php 
                                 $child_fields = isset($child['fields']) ? $child['fields'] : array();
                                 $child_name = isset($child_fields['Department Name']) ? $child_fields['Department Name'] : 'Unknown';
@@ -645,7 +664,17 @@ class Airtable_Directory_Templates {
         
         $name = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
         $title = isset($fields['Title']) ? esc_html($fields['Title']) : '';
-        $dept = isset($fields['Department']) ? esc_html($fields['Department']) : '';
+        $dept = '';
+        if (isset($fields['Departments']) && is_array($fields['Departments'])) {
+            $department_names = array();
+            foreach ($fields['Departments'] as $dept_record_id) {
+                $dept_record = $this->api->get_department_by_record_id($dept_record_id);
+                if ($dept_record && isset($dept_record['fields']['Department Name'])) {
+                    $department_names[] = $dept_record['fields']['Department Name'];
+                }
+            }
+            $dept = !empty($department_names) ? implode(', ', $department_names) : '';
+        }
         $emp_id = isset($fields['Employee ID']) ? esc_html($fields['Employee ID']) : '';
 
         // Add these lines to extract phone and email

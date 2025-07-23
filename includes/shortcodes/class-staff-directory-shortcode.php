@@ -44,46 +44,15 @@ class Airtable_Directory_Staff_Shortcode {
             $records = array();
             
             if (!empty($atts['department'])) {
-                // First, fetch the department record from the Departments table using the field ID
-                $department_id = trim($atts['department']);
-                $department_query_params = array(
-                    'filterByFormula' => "{fldwAR2a55bspWLPt} = '$department_id'"
-                );
+                // Use the new structure - department parameter is now the department name
+                $department_name = trim($atts['department']);
                 
-                $departments = $this->api->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $department_query_params);
+                // Get staff members for this department using the new method
+                $records = $this->api->get_staff_by_department($department_name, true);
                 
-                if (!$departments) {
-                    return '<p>No department found.</p>';
-                }
-                
-                $department_record = $departments[0];
-                
-                // Get employee IDs
-                $employee_ids = array();
-                if (isset($department_record['fields']['Employee IDs']) && is_array($department_record['fields']['Employee IDs'])) {
-                    $employee_ids = $department_record['fields']['Employee IDs'];
-                } else {
+                if (empty($records)) {
                     return '<p>No staff members found for this department.</p>';
                 }
-                
-                if (empty($employee_ids)) {
-                    return '<p>No staff members found for this department.</p>';
-                }
-                
-                // Build filter formula
-                $filter_clauses = array();
-                foreach ($employee_ids as $emp_id) {
-                    $filter_clauses[] = "{fldSsLnHmhFXPyJaj} = '" . $emp_id . "'";
-                }
-                $filter_formula = "OR(" . implode(',', $filter_clauses) . ")";
-                
-                $staff_query_params = array(
-                    'filterByFormula' => $filter_formula,
-                    'fields'          => $fields_to_fetch
-                );
-                
-                // Fetch the staff records from the Staff table.
-                $records = $this->api->fetch_data(AIRTABLE_STAFF_TABLE, $staff_query_params);
             } else {
                 // If no department is specified, list all staff records.
                 $staff_query_params = array(
@@ -131,7 +100,17 @@ class Airtable_Directory_Staff_Shortcode {
                     $fields = isset($record['fields']) ? $record['fields'] : [];
                     $name  = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
                     $title = isset($fields['Title']) ? esc_html($fields['Title']) : 'No Title';
-                    $dept  = isset($fields['Department']) ? html_entity_decode($fields['Department']) : 'No Department';
+                    $dept = 'No Department';
+                    if (isset($fields['Departments']) && is_array($fields['Departments'])) {
+                        $department_names = array();
+                        foreach ($fields['Departments'] as $dept_record_id) {
+                            $dept_record = $this->api->get_department_by_record_id($dept_record_id);
+                            if ($dept_record && isset($dept_record['fields']['Department Name'])) {
+                                $department_names[] = $dept_record['fields']['Department Name'];
+                            }
+                        }
+                        $dept = !empty($department_names) ? implode(', ', $department_names) : 'No Department';
+                    }
                     $email = isset($fields['Email']) ? esc_html($fields['Email']) : 'No Email';
                     $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
                     $photo_url = '';
@@ -193,7 +172,17 @@ class Airtable_Directory_Staff_Shortcode {
     
                 $name  = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
                 $title = isset($fields['Title']) ? esc_html($fields['Title']) : 'No Title';
-                $dept  = isset($fields['Department']) ? html_entity_decode($fields['Department']) : 'No Department';
+                $dept = 'No Department';
+                if (isset($fields['Departments']) && is_array($fields['Departments'])) {
+                    $department_names = array();
+                    foreach ($fields['Departments'] as $dept_record_id) {
+                        $dept_record = $this->api->get_department_by_record_id($dept_record_id);
+                        if ($dept_record && isset($dept_record['fields']['Department Name'])) {
+                            $department_names[] = $dept_record['fields']['Department Name'];
+                        }
+                    }
+                    $dept = !empty($department_names) ? implode(', ', $department_names) : 'No Department';
+                }
                 $email = isset($fields['Email']) ? esc_html($fields['Email']) : 'No Email';
                 $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
 

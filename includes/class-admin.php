@@ -395,7 +395,7 @@ class Airtable_Directory_Admin {
         $airtable_fields = array(
             'Employee ID'      => 'fldSsLnHmhFXPyJaj',
             'Name'             => 'fldQXuUUco3ZRRol2',
-            'Department'       => 'fldtgv6916b9ljddo',
+            'Departments'      => 'fldGqQLnTPWI5HsiL',
             'Title'            => 'fldTlb2WFahG926a2',
             'Phone'            => 'fldsraQiKHMGm6zGP',
             'Phone Extension'  => 'fld583p2zMLHb9ECi',
