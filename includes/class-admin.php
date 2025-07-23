@@ -366,16 +366,20 @@ class Airtable_Directory_Admin {
         }
         $selected_csv = isset($_POST['selected_csv']) ? sanitize_text_field($_POST['selected_csv']) : '';
         $csv_preview = array();
+        $csv_all_rows = array();
         $csv_header = array();
         if ($selected_csv && in_array($selected_csv, $csv_files)) {
             $csv_path = $data_dir . $selected_csv;
             if (($handle = fopen($csv_path, 'r')) !== false) {
                 $row = 0;
-                while (($data = fgetcsv($handle, 10000, ',')) !== false && $row < 21) {
+                while (($data = fgetcsv($handle, 10000, ',')) !== false) {
                     if ($row === 0) {
                         $csv_header = $data;
                     } else {
-                        $csv_preview[] = $data;
+                        $csv_all_rows[] = $data;
+                        if ($row <= 20) {
+                            $csv_preview[] = $data;
+                        }
                     }
                     $row++;
                 }
@@ -536,7 +540,7 @@ class Airtable_Directory_Admin {
                 $unmatched = 0;
                 $unmatched_names = array();
                 $unmatched_rows = array();
-                foreach ($csv_preview as $row) {
+                foreach ($csv_all_rows as $row) {
                     $csv_name = '';
                     $csv_name_field_index = null;
                     foreach ($decoded_field_mapping as $i => $map) {
@@ -559,7 +563,7 @@ class Airtable_Directory_Admin {
             ?>
                 <h3>Mapping Report</h3>
                 <ul>
-                    <li><strong>Total rows in CSV:</strong> <?php echo count($csv_preview); ?></li>
+                    <li><strong>Total rows in CSV:</strong> <?php echo count($csv_all_rows); ?></li>
                     <li><strong>Matched names:</strong> <?php echo $matched; ?></li>
                     <li><strong>Unmatched names:</strong> <?php echo $unmatched; ?></li>
                 </ul>
