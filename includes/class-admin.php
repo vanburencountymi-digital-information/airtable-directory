@@ -382,6 +382,38 @@ class Airtable_Directory_Admin {
                 fclose($handle);
             }
         }
+        $mapping_submitted = isset($_POST['field_mapping_submit']);
+        $field_mapping = isset($_POST['field_mapping']) && is_array($_POST['field_mapping']) ? array_map('sanitize_text_field', $_POST['field_mapping']) : array();
+        // Hard-coded Staff table schema (field name => field id)
+        $staff_table_id = 'tblGUYaSR3ePqIDGK';
+        $airtable_fields = array(
+            'Employee ID'      => 'fldSsLnHmhFXPyJaj',
+            'Name'             => 'fldQXuUUco3ZRRol2',
+            'Department'       => 'fldtgv6916b9ljddo',
+            'Title'            => 'fldTlb2WFahG926a2',
+            'Phone'            => 'fldsraQiKHMGm6zGP',
+            'Phone Extension'  => 'fld583p2zMLHb9ECi',
+            'Email'            => 'fldzYbZbb9EzARUZi',
+            'Show Email As'    => 'fldolyVdgnp60Zyd9',
+            'Photo'            => 'fld6ZzaPzRHy0vCr1',
+            'Public'           => 'fld3lSnwtCrvtL4W5',
+            'Featured'         => 'fldhMTtMGzz71uXBx',
+            'Link'             => 'fldH7q4B4mdULfruM',
+            'Link Text'        => 'fldRG5MwZj0pFCBA4',
+            'Biography'        => 'fldNBRNOYGw95nBe9',
+        );
+        $airtable_field_labels = array_keys($airtable_fields);
+        // Fetch staff records for matching if mapping submitted
+        $staff_lookup = array();
+        if ($mapping_submitted && !empty($field_mapping)) {
+            $staff_records = $this->api->fetch_data($staff_table_id, array('fields' => $airtable_fields));
+            foreach ($staff_records as $record) {
+                $fields = isset($record['fields']) ? $record['fields'] : array();
+                if (!empty($fields['Name'])) {
+                    $staff_lookup[strtolower(trim($fields['Name']))] = $fields;
+                }
+            }
+        }
         ?>
         <div class="wrap">
             <h1>CSV Staff Import/Update</h1>
@@ -420,6 +452,114 @@ class Airtable_Directory_Admin {
                 </table>
                 </div>
                 <p><em>Showing first <?php echo count($csv_preview); ?> rows. Only a preview; no changes have been made.</em></p>
+                <?php if (!$mapping_submitted): ?>
+                    <form method="post" style="margin-top:2em;">
+                        <?php wp_nonce_field('airtable_directory_csv_mapping'); ?>
+                        <input type="hidden" name="selected_csv" value="<?php echo esc_attr($selected_csv); ?>">
+                        <h3>Field Mapping</h3>
+                        <table class="form-table">
+                            <thead>
+                                <tr>
+                                    <th>CSV Column</th>
+                                    <th>Map to Airtable Field</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($csv_header as $i => $col): ?>
+                                    <tr>
+                                        <td><?php echo esc_html($col); ?></td>
+                                        <td>
+                                            <select name="field_mapping[<?php echo esc_attr($i); ?>]">
+                                                <option value="">-- Ignore --</option>
+                                                <?php foreach ($airtable_field_labels as $af_label): ?>
+                                                    <option value="<?php echo esc_attr($airtable_fields[$af_label]); ?>" <?php if (strtolower($col) === strtolower($af_label)) echo 'selected'; ?>><?php echo esc_html($af_label); ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                        <input type="submit" name="field_mapping_submit" class="button button-primary" value="Preview Matches">
+                    </form>
+                <?php endif; ?>
+            <?php endif; ?>
+            <?php if ($mapping_submitted && !empty($field_mapping) && !empty($csv_header)):
+                // Build match stats
+                $matched = 0;
+                $unmatched = 0;
+                $unmatched_names = array();
+                $unmatched_rows = array();
+                foreach ($csv_preview as $row) {
+                    $csv_name = '';
+                    foreach ($field_mapping as $i => $af_id) {
+                        if ($af_id === 'fldQXuUUco3ZRRol2') { // Name field
+                            $csv_name = isset($row[$i]) ? $row[$i] : '';
+                            break;
+                        }
+                    }
+                    if ($csv_name && isset($staff_lookup[strtolower(trim($csv_name))])) {
+                        $matched++;
+                    } else {
+                        $unmatched++;
+                        $unmatched_names[] = $csv_name;
+                        $unmatched_rows[] = $row;
+                    }
+                }
+            ?>
+                <h3>Mapping Report</h3>
+                <ul>
+                    <li><strong>Total rows in CSV:</strong> <?php echo count($csv_preview); ?></li>
+                    <li><strong>Matched names:</strong> <?php echo $matched; ?></li>
+                    <li><strong>Unmatched names:</strong> <?php echo $unmatched; ?></li>
+                </ul>
+                <?php if ($unmatched > 0): ?>
+                    <div style="margin-bottom:1em;"><strong>Unmatched Names:</strong> <?php echo implode(', ', array_map('esc_html', $unmatched_names)); ?></div>
+                <?php endif; ?>
+                <p><em>Unmatched names will be added as new records if you proceed. If you want to correct a name in the CSV or Airtable so it matches, please do so and re-upload before continuing.</em></p>
+                <?php if ($unmatched > 0): ?>
+                    <form method="post" style="margin-top:2em;">
+                        <?php wp_nonce_field('airtable_directory_csv_addnew'); ?>
+                        <input type="hidden" name="selected_csv" value="<?php echo esc_attr($selected_csv); ?>">
+                        <?php foreach ($field_mapping as $i => $af_id): ?>
+                            <input type="hidden" name="field_mapping[<?php echo esc_attr($i); ?>]" value="<?php echo esc_attr($af_id); ?>">
+                        <?php endforeach; ?>
+                        <h3>Review Unmatched Names</h3>
+                        <div style="overflow-x:auto; max-width:100%;">
+                        <table class="widefat fixed striped">
+                            <thead>
+                                <tr>
+                                    <?php foreach ($csv_header as $col): ?>
+                                        <th><?php echo esc_html($col); ?></th>
+                                    <?php endforeach; ?>
+                                    <th>Add as new?</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($unmatched_rows as $row):
+                                    $csv_name = '';
+                                    foreach ($field_mapping as $i => $af_id) {
+                                        if ($af_id === 'fldQXuUUco3ZRRol2') { // Name field
+                                            $csv_name = isset($row[$i]) ? $row[$i] : '';
+                                            break;
+                                        }
+                                    }
+                                ?>
+                                <tr style="background:#ffeaea">
+                                    <?php foreach ($row as $cell): ?>
+                                        <td><?php echo esc_html($cell); ?></td>
+                                    <?php endforeach; ?>
+                                    <td><input type="checkbox" name="add_new[<?php echo esc_attr($csv_name); ?>]" checked></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                        </div>
+                        <input type="submit" name="add_new_submit" class="button button-primary" value="Add Selected New Records">
+                    </form>
+                <?php else: ?>
+                    <p><strong>All names in the CSV matched existing Airtable records. No new records will be added.</strong></p>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
         <?php

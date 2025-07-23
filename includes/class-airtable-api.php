@@ -139,7 +139,7 @@ class Airtable_Directory_API {
             'fields' => array('Name', 'Title', 'Department', 'Email', 'Phone', 'Photo', 'Public', 'Employee ID')
         );
         
-        $employees = $this->fetch_data(AIRTABLE_STAFF_TABLE, $query_params);
+        $employees = $this->fetch_data(AIRTABLE_STAFF_TABLE_ID, $query_params);
         
         return !empty($employees) ? $employees[0] : false;
     }
@@ -290,7 +290,7 @@ class Airtable_Directory_API {
             'filterByFormula' => $filter_formula
         );
         
-        $staff_results = $this->fetch_data(AIRTABLE_STAFF_TABLE, $staff_query_params);
+        $staff_results = $this->fetch_data(AIRTABLE_STAFF_TABLE_ID, $staff_query_params);
         error_log("Staff lookup returned " . count($staff_results) . " results");
         
         // Filter to only public staff if requested
@@ -368,7 +368,7 @@ class Airtable_Directory_API {
             'maxRecords' => 1
         );
         
-        $employees = $this->fetch_data(AIRTABLE_STAFF_TABLE, $query_params);
+        $employees = $this->fetch_data(AIRTABLE_STAFF_TABLE_ID, $query_params);
         
         return !empty($employees) ? $employees[0] : false;
     }
