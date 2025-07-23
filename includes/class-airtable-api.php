@@ -511,11 +511,14 @@ class Airtable_Directory_API {
         
         $board_members_query_params = array(
             'filterByFormula' => $filter_formula,
-            'fields' => array('Name', 'Role on Board', 'Representative Type', 'Notes')
+            'fields' => array('Name', 'Role on Board', 'Representative Type', 'Notes', 'Display Order')
         );
         
         $board_members_results = $this->fetch_data(AIRTABLE_BOARD_MEMBERS_TABLE, $board_members_query_params);
         error_log("Board members lookup returned " . count($board_members_results) . " results");
+        
+        // Sort board members by display order
+        $board_members_results = $this->sort_board_members_by_order($board_members_results);
         
         return $board_members_results;
     }
@@ -558,6 +561,37 @@ class Airtable_Directory_API {
         }
         
         return 0;
+    }
+    
+    /**
+     * Sort board members by display order
+     *
+     * @param array $board_members Array of board member records
+     * @return array Sorted array of board member records
+     */
+    public function sort_board_members_by_order($board_members) {
+        if (empty($board_members)) {
+            return $board_members;
+        }
+        
+        usort($board_members, function($a, $b) {
+            $a_fields = isset($a['fields']) ? $a['fields'] : array();
+            $b_fields = isset($b['fields']) ? $b['fields'] : array();
+            
+            $a_order = isset($a_fields['Display Order']) ? intval($a_fields['Display Order']) : 999;
+            $b_order = isset($b_fields['Display Order']) ? intval($b_fields['Display Order']) : 999;
+            
+            // If display order is the same, sort alphabetically by name
+            if ($a_order === $b_order) {
+                $a_name = isset($a_fields['Name']) ? $a_fields['Name'] : '';
+                $b_name = isset($b_fields['Name']) ? $b_fields['Name'] : '';
+                return strcasecmp($a_name, $b_name);
+            }
+            
+            return $a_order - $b_order;
+        });
+        
+        return $board_members;
     }
     
     /**

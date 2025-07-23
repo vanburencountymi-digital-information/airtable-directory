@@ -278,6 +278,9 @@ Available fields:
 - `representative_type` - Representative type
 - `notes` - Additional notes
 
+**Display Order:**
+Board members are automatically sorted by their "Display Order" field (lower numbers appear first). Members without a display order value appear last, sorted alphabetically by name.
+
 **Board Details**
 
 Display detailed information about a specific board (using ID number or record ID):
@@ -478,6 +481,16 @@ Available fields: name, logo, contact_info, meeting_location, meeting_time, memb
 = What happens if a board field is missing? =
 
 If a board or board member is missing data for a field, the plugin will gracefully handle it and not display empty fields.
+
+= How do I control the order of board members? =
+
+Add a "Display Order" field (number type) to your Board Members table in Airtable. Set lower numbers for members you want to appear first:
+- Chair/Chairperson: 1
+- Vice-Chair: 2  
+- Secretary: 3
+- Treasurer: 4
+- Regular members: 10, 20, 30, etc.
+- Members without a display order value will appear last, sorted alphabetically
 
 == Changelog ==
 

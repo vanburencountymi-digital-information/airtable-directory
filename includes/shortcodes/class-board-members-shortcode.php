@@ -40,7 +40,7 @@ class Airtable_Directory_Board_Members_Shortcode {
             $view = strtolower($atts['view']);
             
             // These are the fields we want from the Board Members table.
-            $fields_to_fetch = array('Name', 'Role on Board', 'Representative Type', 'Notes');
+            $fields_to_fetch = array('Name', 'Role on Board', 'Representative Type', 'Notes', 'Display Order');
 
             $records = array();
             

@@ -31,7 +31,7 @@ class Airtable_Directory_Board_Details_Shortcode {
         try {
             $atts = shortcode_atts(array(
                 'board' => '',
-                'show'  => 'name,logo,contact_info,meeting_location,meeting_time,members',
+                'show'  => 'logo,contact_info,meeting_location,meeting_time,members',
                 'view'  => 'card',
                 'show_members' => 'true'
             ), $atts, 'board_details');
@@ -157,6 +157,11 @@ class Airtable_Directory_Board_Details_Shortcode {
             
             // Table View
             $output = '<div class="board-details-table">';
+            if (in_array('logo', $visible_fields) && !empty($logo_url)) {
+                $output .= '<div class="board-logo">';
+                $output .= "<img src='$logo_url' alt='Logo of $name'>";
+                $output .= '</div>';
+            }
             $output .= '<table class="board-details-table-inner">';
             $output .= '<tbody>';
             
