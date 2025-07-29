@@ -294,7 +294,7 @@ class Airtable_Directory_API {
             // Check if this staff member has the department record ID in their Departments array
             if (isset($fields['Departments']) && is_array($fields['Departments'])) {
                 $staff_departments = $fields['Departments'];
-                error_log("Staff member " . (isset($fields['Name']) ? $fields['Name'] : 'Unknown') . " has departments: " . print_r($staff_departments, true));
+
                 
                 // Check if this department record ID is in the staff member's departments
                 if (in_array($department_record_id, $staff_departments)) {
@@ -661,6 +661,11 @@ class Airtable_Directory_API {
             'fields' => $fields
         );
         
+        error_log('[Airtable Directory] API UPDATE: URL: ' . $url);
+        error_log('[Airtable Directory] API UPDATE: Record ID: ' . $record_id);
+        error_log('[Airtable Directory] API UPDATE: Fields count: ' . count($fields));
+        error_log('[Airtable Directory] API UPDATE: Fields: ' . print_r($fields, true));
+        
         $args = array(
             'headers' => array(
                 'Authorization' => 'Bearer ' . $api_key,
@@ -673,18 +678,22 @@ class Airtable_Directory_API {
         $response = wp_remote_request($url, $args);
         
         if (is_wp_error($response)) {
-            error_log('Airtable API Error (update_record): ' . $response->get_error_message());
+            error_log('[Airtable Directory] API UPDATE: WP Error: ' . $response->get_error_message());
             return false;
         }
         
+        $response_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
         $result = json_decode($body, true);
         
-        if (wp_remote_retrieve_response_code($response) === 200 && isset($result['id'])) {
-            error_log('Airtable record updated successfully: ' . $result['id']);
+        error_log('[Airtable Directory] API UPDATE: Response code: ' . $response_code);
+        error_log('[Airtable Directory] API UPDATE: Response body: ' . $body);
+        
+        if ($response_code === 200 && isset($result['id'])) {
+            error_log('[Airtable Directory] API UPDATE: Success for record: ' . $result['id']);
             return $result;
         } else {
-            error_log('Airtable API Error (update_record): ' . $body);
+            error_log('[Airtable Directory] API UPDATE: Failed - Code: ' . $response_code . ', Body: ' . $body);
             return false;
         }
     }
