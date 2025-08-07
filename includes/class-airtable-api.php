@@ -162,14 +162,14 @@ class Airtable_Directory_API {
     }
     
     /**
-     * Get child departments for a parent department using Parent Name
+     * Get child departments for a parent department using Parent ID
      *
      * @param string $parent_name Parent department name
      * @return array Array of child department records
      */
     public function get_child_departments($parent_name) {
         $query_params = array(
-            'filterByFormula' => "{Parent Department} = '" . addslashes($parent_name) . "'"
+            'filterByFormula' => "{Parent ID} = '" . addslashes($parent_name) . "'"
         );
         
         return $this->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $query_params);
@@ -182,7 +182,7 @@ class Airtable_Directory_API {
      */
     public function get_parent_departments() {
         $query_params = array(
-            'filterByFormula' => "{Parent Department} = BLANK()"
+            'filterByFormula' => "{Parent ID} = BLANK()"
         );
         
         return $this->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $query_params);

@@ -1,0 +1,379 @@
+/* Directory Archive Page Styling */
+.directory-archive-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    margin-top: 40px;
+}
+
+.directory-archive-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.directory-archive-header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.archive-description {
+    font-size: 1.1em;
+    color: #666;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Search Bar */
+.directory-search-container {
+    margin-bottom: 20px;
+    text-align: center;
+    background-color: #fff;
+}
+
+.search-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.search-input {
+    padding: 12px 15px 12px 40px;
+    border: 1px solid #ccc;
+    border-radius: 25px;
+    font-size: 1em;
+    width: 300px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #6d5c52;
+    box-shadow: 0 0 5px rgba(109, 92, 82, 0.5);
+}
+
+.clear-search-btn {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-75%);
+    padding: 5px;
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: color 0.2s ease;
+}
+
+.clear-search-btn:hover {
+    color: #333;
+}
+
+.search-results-info {
+    margin-top: 10px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+/* Category Navigation */
+.category-navigation {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 40px;
+    border: 1px solid #e9ecef;
+}
+
+.category-navigation h2 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 1.5em;
+    text-align: center;
+}
+
+.category-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+}
+
+.category-link {
+    display: inline-block;
+    background: #6d5c52;
+    color: white;
+    padding: 10px 16px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    font-size: 0.9em;
+}
+
+.category-link:hover {
+    background: #6d5c52;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.department-count {
+    font-size: 0.8em;
+    opacity: 0.9;
+    margin-left: 4px;
+}
+
+/* Category Sections */
+.category-section {
+    margin-bottom: 50px;
+    scroll-margin-top: 20px;
+}
+
+.category-title {
+    font-size: 2em;
+    color: #2c3e50;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid #6d5c52;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.category-count {
+    font-size: 0.6em;
+    color: #666;
+    font-weight: normal;
+}
+
+.category-description {
+    color: #666;
+    font-size: 1.1em;
+    line-height: 1.6;
+    margin-bottom: 25px;
+    font-style: italic;
+}
+
+.departments-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.department-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 300px;
+}
+
+.department-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.department-card-header {
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.department-title {
+    margin: 0 0 15px 0;
+    font-size: 1.3em;
+    height: 4.5em;
+    line-height: 1.5em;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.department-title a {
+    color: #2c3e50;
+    text-decoration: none;
+    transition: color 0.2s ease;
+    display: block;
+    height: 100%;
+}
+
+.department-title a:hover {
+    color: #3498db;
+}
+
+.department-photo {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+
+.department-photo.no-photo {
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-style: italic;
+}
+
+.department-stats {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.staff-count, .child-count {
+    background: #6d5c52;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+}
+
+.department-card-content {
+    margin-bottom: 20px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.department-contact-preview {
+    font-size: 0.9em;
+    color: #555;
+    line-height: 1.4;
+    margin-bottom: 15px;
+}
+
+.department-contact-preview a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.department-contact-preview a:hover {
+    text-decoration: underline;
+}
+
+.child-departments {
+    margin-top: 15px;
+    font-size: 0.9em;
+}
+
+.child-departments strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.child-departments ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.child-departments li {
+    margin-bottom: 5px;
+}
+
+.child-departments a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.child-departments a:hover {
+    text-decoration: underline;
+}
+
+.department-card-footer {
+    text-align: center;
+    flex-shrink: 0;
+    margin-top: auto;
+}
+
+.view-department-btn {
+    display: inline-block;
+    background: #a3473b;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+}
+
+.view-department-btn:hover {
+    color: white;
+    background: rgb(131, 57, 47);
+}
+
+.no-departments-found {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+}
+
+.no-departments-found h2 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+/* Smooth scrolling for category links */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .departments-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .directory-archive-container {
+        padding: 15px;
+    }
+    
+    .directory-archive-header h1 {
+        font-size: 2em;
+    }
+    
+    .department-card {
+        padding: 20px;
+    }
+    
+    .category-navigation {
+        padding: 20px;
+    }
+    
+    .category-links {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .category-link {
+        width: 100%;
+        max-width: 300px;
+        text-align: center;
+    }
+    
+    .category-title {
+        font-size: 1.6em;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .search-input {
+        width: 100%;
+        max-width: 300px;
+    }
+} 

@@ -387,35 +387,6 @@
     margin-top: 2em;
 }
 
-.department-card {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.department-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-}
-
-.department-card h3 {
-    margin-top: 0;
-    margin-bottom: 1em;
-    color: #333;
-}
-
-.department-card h3 a {
-    text-decoration: none;
-    color: #007cba;
-}
-
-.department-card h3 a:hover {
-    text-decoration: underline;
-}
-
 .department-stats {
     display: flex;
     gap: 15px;

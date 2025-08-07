@@ -46,6 +46,15 @@ class Airtable_Directory {
         );
         wp_enqueue_style('airtable-directory-styles');
         
+        // Enqueue directory archive styles and scripts
+        wp_register_style(
+            'airtable-directory-archive-styles', 
+            AIRTABLE_DIRECTORY_PLUGIN_URL . 'assets/css/directory-archive.css',
+            array(),
+            AIRTABLE_DIRECTORY_VERSION
+        );
+        wp_enqueue_style('airtable-directory-archive-styles');
+        
         // Enqueue the search functionality JavaScript
         wp_register_script(
             'airtable-directory-search',
@@ -55,5 +64,15 @@ class Airtable_Directory {
             true
         );
         wp_enqueue_script('airtable-directory-search');
+        
+        // Enqueue directory archive JavaScript
+        wp_register_script(
+            'airtable-directory-archive',
+            AIRTABLE_DIRECTORY_PLUGIN_URL . 'assets/js/directory-archive.js',
+            array(),
+            AIRTABLE_DIRECTORY_VERSION,
+            true
+        );
+        wp_enqueue_script('airtable-directory-archive');
     }
 } 
