@@ -675,7 +675,7 @@ class Airtable_Directory_Templates {
             }
             $dept = !empty($department_names) ? implode(', ', $department_names) : '';
         }
-        $emp_id = isset($fields['Employee ID']) ? esc_html($fields['Employee ID']) : '';
+        // $emp_id = isset($fields['Employee ID']) ? esc_html($fields['Employee ID']) : '';
 
         // Add these lines to extract phone and email
         $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
