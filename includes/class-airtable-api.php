@@ -127,6 +127,23 @@ class Airtable_Directory_API {
     }
     
     /**
+     * Get department by name (now the primary key)
+     *
+     * @param string $department_name Department name
+     * @return array|false Department data or false if not found
+     */
+    public function get_department_by_name($department_name) {
+        $query_params = array(
+            'filterByFormula' => "{Department Name} = '" . addslashes($department_name) . "'",
+            'maxRecords' => 1
+        );
+        
+        $departments = $this->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $query_params);
+        
+        return !empty($departments) ? $departments[0] : false;
+    }
+    
+    /**
      * Get employee by Employee ID (number)
      *
      * @param string|int $employee_id Employee ID number
@@ -139,20 +156,20 @@ class Airtable_Directory_API {
             'fields' => array('Name', 'Title', 'Department', 'Email', 'Phone', 'Photo', 'Public', 'Employee ID')
         );
         
-        $employees = $this->fetch_data(AIRTABLE_STAFF_TABLE, $query_params);
+        $employees = $this->fetch_data(AIRTABLE_STAFF_TABLE_ID, $query_params);
         
         return !empty($employees) ? $employees[0] : false;
     }
     
     /**
-     * Get child departments for a parent department using Parent ID
+     * Get child departments for a parent department using Parent Name
      *
-     * @param string|int $parent_id Parent department ID number
+     * @param string $parent_name Parent department name
      * @return array Array of child department records
      */
-    public function get_child_departments($parent_id) {
+    public function get_child_departments($parent_name) {
         $query_params = array(
-            'filterByFormula' => "{Parent ID} = " . intval($parent_id)
+            'filterByFormula' => "{Parent Department} = '" . addslashes($parent_name) . "'"
         );
         
         return $this->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $query_params);
@@ -165,7 +182,7 @@ class Airtable_Directory_API {
      */
     public function get_parent_departments() {
         $query_params = array(
-            'filterByFormula' => "{Parent ID} = BLANK()"
+            'filterByFormula' => "{Parent Department} = BLANK()"
         );
         
         return $this->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $query_params);
@@ -242,101 +259,73 @@ class Airtable_Directory_API {
     }
 
     /**
-     * Get staff members by department using Employee IDs array or Staff field
+     * Get staff members by department using the new linked records structure
      *
-     * @param string|int $department_id Department ID number
+     * @param string $department_name Department name (now the primary key)
      * @param bool $public_only Whether to filter to only public staff members (default: true)
      * @return array Array of staff records
      */
-    public function get_staff_by_department($department_id, $public_only = true) {
-        // First, get the department to find employee IDs
-        $department = $this->get_department_by_id($department_id);
+    public function get_staff_by_department($department_name, $public_only = true) {
+        error_log("Getting staff for department: " . $department_name);
         
+        // First, get the department record to find its record ID
+        $department = $this->get_department_by_name($department_name);
         if (!$department) {
-            error_log("Department not found for ID: " . $department_id);
+            error_log("Department not found: " . $department_name);
             return array();
         }
         
-        $fields = isset($department['fields']) ? $department['fields'] : array();
-        $employee_ids = array();
+        $department_record_id = $department['id'];
+        error_log("Department record ID: " . $department_record_id);
         
-        // Check for Employee IDs array first
-        if (isset($fields['Employee IDs']) && is_array($fields['Employee IDs'])) {
-            $employee_ids = $fields['Employee IDs'];
-            error_log("Found Employee IDs array: " . print_r($employee_ids, true));
-        }
-        // Check for Staff field (comma-separated string)
-        elseif (isset($fields['Staff']) && !empty($fields['Staff'])) {
-            $staff_string = $fields['Staff'];
-            $employee_ids = array_filter(array_map('trim', explode(',', $staff_string)));
-            error_log("Found Staff field: " . $staff_string . " -> " . print_r($employee_ids, true));
-        }
-        
-        if (empty($employee_ids)) {
-            error_log("No employee IDs found for department " . $department_id);
-            return array();
-        }
-        
-        // Build filter formula for staff members using Employee ID numbers
-        $filter_clauses = array();
-        foreach ($employee_ids as $emp_id) {
-            $filter_clauses[] = "{Employee ID} = " . intval($emp_id);
-        }
-        $filter_formula = "OR(" . implode(',', $filter_clauses) . ")";
-        
-        error_log("Staff lookup filter formula: " . $filter_formula);
-        
+        // Get all staff records and filter by those who have this department's record ID in their Departments array
         $staff_query_params = array(
-            'filterByFormula' => $filter_formula
+            'fields' => array('Name', 'Title', 'Departments', 'Photo', 'Public', 'Featured', 'Email', 'Phone')
         );
         
-        $staff_results = $this->fetch_data(AIRTABLE_STAFF_TABLE, $staff_query_params);
-        error_log("Staff lookup returned " . count($staff_results) . " results");
+        $all_staff = $this->fetch_data(AIRTABLE_STAFF_TABLE_ID, $staff_query_params);
+        error_log("Total staff records fetched: " . count($all_staff));
+        
+        $department_staff = array();
+        
+        foreach ($all_staff as $staff_record) {
+            $fields = isset($staff_record['fields']) ? $staff_record['fields'] : array();
+            
+            // Check if this staff member has the department record ID in their Departments array
+            if (isset($fields['Departments']) && is_array($fields['Departments'])) {
+                $staff_departments = $fields['Departments'];
+
+                
+                // Check if this department record ID is in the staff member's departments
+                if (in_array($department_record_id, $staff_departments)) {
+                    error_log("Found staff member " . (isset($fields['Name']) ? $fields['Name'] : 'Unknown') . " in department " . $department_name);
+                    $department_staff[] = $staff_record;
+                }
+            }
+        }
+        
+        error_log("Found " . count($department_staff) . " staff members in department " . $department_name);
         
         // Filter to only public staff if requested
         if ($public_only) {
-            $staff_results = $this->filter_public_staff($staff_results);
-            error_log("After filtering for public staff: " . count($staff_results) . " results");
+            $department_staff = $this->filter_public_staff($department_staff);
+            error_log("After filtering for public staff: " . count($department_staff) . " results");
         }
         
-        return $staff_results;
+        return $department_staff;
     }
     
     /**
-     * Get staff count for a department using Employee IDs array or Staff field
+     * Get staff count for a department using the new linked records structure
      *
-     * @param string|int $department_id Department ID number
+     * @param string $department_name Department name (now the primary key)
      * @param bool $public_only Whether to count only public staff members (default: true)
      * @return int Number of staff members
      */
-    public function get_department_staff_count($department_id, $public_only = true) {
-        if ($public_only) {
-            // Get actual staff records and count them after filtering
-            $staff_members = $this->get_staff_by_department($department_id, true);
-            return count($staff_members);
-        }
-        
-        // Original logic for counting all staff (including non-public)
-        $department = $this->get_department_by_id($department_id);
-        
-        if (!$department) {
-            return 0;
-        }
-        
-        $fields = isset($department['fields']) ? $department['fields'] : array();
-        
-        // Check for Employee IDs array first
-        if (isset($fields['Employee IDs']) && is_array($fields['Employee IDs'])) {
-            return count($fields['Employee IDs']);
-        }
-        
-        // Check for Staff field (comma-separated string)
-        if (isset($fields['Staff']) && !empty($fields['Staff'])) {
-            $staff_ids = explode(',', $fields['Staff']);
-            return count(array_filter(array_map('trim', $staff_ids)));
-        }
-        
-        return 0;
+    public function get_department_staff_count($department_name, $public_only = true) {
+        // Get actual staff records and count them
+        $staff_members = $this->get_staff_by_department($department_name, $public_only);
+        return count($staff_members);
     }
     
     /**
@@ -368,7 +357,7 @@ class Airtable_Directory_API {
             'maxRecords' => 1
         );
         
-        $employees = $this->fetch_data(AIRTABLE_STAFF_TABLE, $query_params);
+        $employees = $this->fetch_data(AIRTABLE_STAFF_TABLE_ID, $query_params);
         
         return !empty($employees) ? $employees[0] : false;
     }
@@ -607,5 +596,115 @@ class Airtable_Directory_API {
         delete_transient('airtable_board_member_slugs');
         
         error_log('Cleared all board-related caches');
+    }
+
+    /**
+     * Add a new record to Airtable
+     *
+     * @param string $table_id Table ID
+     * @param array $fields Array of field data (field name => value)
+     * @return array|false Record data on success, false on failure
+     */
+    public function add_record($table_id, $fields) {
+        $api_key = AIRTABLE_API_KEY;
+        $base_id = AIRTABLE_BASE_ID;
+        
+        $url = "https://api.airtable.com/v0/" . $base_id . "/" . urlencode($table_id);
+        
+        $data = array(
+            'fields' => $fields
+        );
+        
+        $args = array(
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type'  => 'application/json'
+            ),
+            'body' => json_encode($data),
+            'method' => 'POST'
+        );
+        
+        $response = wp_remote_post($url, $args);
+        
+        if (is_wp_error($response)) {
+            error_log('Airtable API Error (add_record): ' . $response->get_error_message());
+            return false;
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $result = json_decode($body, true);
+        
+        if (wp_remote_retrieve_response_code($response) === 200 && isset($result['id'])) {
+            error_log('Airtable record created successfully: ' . $result['id']);
+            return $result;
+        } else {
+            error_log('Airtable API Error (add_record): ' . $body);
+            return false;
+        }
+    }
+    
+    /**
+     * Update an existing record in Airtable
+     *
+     * @param string $table_id Table ID
+     * @param string $record_id Record ID to update
+     * @param array $fields Array of field data (field name => value)
+     * @return array|false Record data on success, false on failure
+     */
+    public function update_record($table_id, $record_id, $fields) {
+        $api_key = AIRTABLE_API_KEY;
+        $base_id = AIRTABLE_BASE_ID;
+        
+        $url = "https://api.airtable.com/v0/" . $base_id . "/" . urlencode($table_id) . "/" . urlencode($record_id);
+        
+        $data = array(
+            'fields' => $fields
+        );
+        
+        error_log('[Airtable Directory] API UPDATE: URL: ' . $url);
+        error_log('[Airtable Directory] API UPDATE: Record ID: ' . $record_id);
+        error_log('[Airtable Directory] API UPDATE: Fields count: ' . count($fields));
+        error_log('[Airtable Directory] API UPDATE: Fields: ' . print_r($fields, true));
+        
+        $args = array(
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type'  => 'application/json'
+            ),
+            'body' => json_encode($data),
+            'method' => 'PATCH'
+        );
+        
+        $response = wp_remote_request($url, $args);
+        
+        if (is_wp_error($response)) {
+            error_log('[Airtable Directory] API UPDATE: WP Error: ' . $response->get_error_message());
+            return false;
+        }
+        
+        $response_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        $result = json_decode($body, true);
+        
+        error_log('[Airtable Directory] API UPDATE: Response code: ' . $response_code);
+        error_log('[Airtable Directory] API UPDATE: Response body: ' . $body);
+        
+        if ($response_code === 200 && isset($result['id'])) {
+            error_log('[Airtable Directory] API UPDATE: Success for record: ' . $result['id']);
+            return $result;
+        } else {
+            error_log('[Airtable Directory] API UPDATE: Failed - Code: ' . $response_code . ', Body: ' . $body);
+            return false;
+        }
+    }
+    
+    /**
+     * Clear cache for a specific table after updates
+     *
+     * @param string $table_id Table ID
+     */
+    public function clear_table_cache($table_id) {
+        $this->clear_cache($table_id);
+        error_log('Cleared cache for table: ' . $table_id);
     }
 } 

@@ -30,6 +30,7 @@ define('AIRTABLE_DEPARTMENT_TABLE', 'Departments');
 define('AIRTABLE_STAFF_TABLE', 'Staff');
 define('AIRTABLE_BOARDS_TABLE', 'tbl9tauYmY6X4gtWL');
 define('AIRTABLE_BOARD_MEMBERS_TABLE', 'tbl4b5yx3bgjXOudV');
+define('AIRTABLE_STAFF_TABLE_ID', 'tblGUYaSR3ePqIDGK');
 
 // Load required files
 require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-airtable-api.php';

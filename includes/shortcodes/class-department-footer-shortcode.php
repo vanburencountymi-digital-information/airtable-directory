@@ -258,24 +258,11 @@ class Airtable_Directory_Department_Footer_Shortcode {
                 
                 // Staff column (if enabled)
                 if ($show_staff) {
-                    // Get employee IDs for this department
-                    $employee_ids = array();
-                    if (isset($fields['Employee IDs']) && is_array($fields['Employee IDs'])) {
-                        $employee_ids = $fields['Employee IDs'];
-                    }
-                    if (!empty($employee_ids)) {
-                        // Build filter formula for staff
-                        $filter_clauses = array();
-                        foreach ($employee_ids as $emp_id) {
-                            $filter_clauses[] = "{fldSsLnHmhFXPyJaj} = '" . $emp_id . "'";
-                        }
-                        $filter_formula = "OR(" . implode(',', $filter_clauses) . ")";
-                        $fields_to_fetch = array('Name', 'Title', 'Photo', 'Featured');
-                        $staff_query_params = array(
-                            'filterByFormula' => $filter_formula,
-                            'fields' => $fields_to_fetch
-                        );
-                        $staff_records = $this->api->fetch_data(AIRTABLE_STAFF_TABLE, $staff_query_params);
+                    // Get department name for staff lookup
+                    $department_name = isset($fields['Department Name']) ? $fields['Department Name'] : '';
+                    if (!empty($department_name)) {
+                        // Use the new method to get staff for this department
+                        $staff_records = $this->api->get_staff_by_department($department_name, true);
                         if ($staff_records) {
                             // Show featured staff as contact persons
                             $featured = array();

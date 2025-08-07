@@ -98,7 +98,17 @@ class Airtable_Directory_Searchable_Staff_Shortcode {
                 
                 $name = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
                 $title = isset($fields['Title']) ? esc_html($fields['Title']) : 'No Title';
-                $dept = isset($fields['Department']) ? html_entity_decode($fields['Department']) : 'No Department';
+                $dept = 'No Department';
+                if (isset($fields['Departments']) && is_array($fields['Departments'])) {
+                    $department_names = array();
+                    foreach ($fields['Departments'] as $dept_record_id) {
+                        $dept_record = $this->api->get_department_by_record_id($dept_record_id);
+                        if ($dept_record && isset($dept_record['fields']['Department Name'])) {
+                            $department_names[] = $dept_record['fields']['Department Name'];
+                        }
+                    }
+                    $dept = !empty($department_names) ? implode(', ', $department_names) : 'No Department';
+                }
                 $email = isset($fields['Email']) ? esc_html($fields['Email']) : 'No Email';
                 $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
                 
@@ -197,7 +207,17 @@ class Airtable_Directory_Searchable_Staff_Shortcode {
                 
                 $name = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
                 $title = isset($fields['Title']) ? esc_html($fields['Title']) : 'No Title';
-                $dept = isset($fields['Department']) ? html_entity_decode($fields['Department']) : 'No Department';
+                $dept = 'No Department';
+                if (isset($fields['Departments']) && is_array($fields['Departments'])) {
+                    $department_names = array();
+                    foreach ($fields['Departments'] as $dept_record_id) {
+                        $dept_record = $this->api->get_department_by_record_id($dept_record_id);
+                        if ($dept_record && isset($dept_record['fields']['Department Name'])) {
+                            $department_names[] = $dept_record['fields']['Department Name'];
+                        }
+                    }
+                    $dept = !empty($department_names) ? implode(', ', $department_names) : 'No Department';
+                }
                 $email = isset($fields['Email']) ? esc_html($fields['Email']) : 'No Email';
                 $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
                 
