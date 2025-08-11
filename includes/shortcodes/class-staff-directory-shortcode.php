@@ -39,7 +39,7 @@ class Airtable_Directory_Staff_Shortcode {
             $visible_fields = array_map('trim', explode(',', strtolower($atts['show'])));
             $view = strtolower($atts['view']);
             // These are the fields we want from the Staff table.
-            $fields_to_fetch = array('Name', 'Title', 'Department', 'Email', 'Phone', 'Photo', 'Public');
+            $fields_to_fetch = array('Name', 'Title', 'Department', 'Email', 'Phone', 'Phone Extension', 'Show Email As', 'Photo', 'Public');
     
             $records = array();
             
@@ -112,7 +112,13 @@ class Airtable_Directory_Staff_Shortcode {
                         $dept = !empty($department_names) ? implode(', ', $department_names) : 'No Department';
                     }
                     $email = isset($fields['Email']) ? esc_html($fields['Email']) : 'No Email';
-                    $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
+                    $email_text = isset($fields['Show Email As']) && trim($fields['Show Email As']) !== '' ? esc_html($fields['Show Email As']) : $email;
+                    $base_phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
+                    $phone_ext = isset($fields['Phone Extension']) ? trim((string)$fields['Phone Extension']) : '';
+                    $display_phone = $base_phone;
+                    if ($base_phone !== 'No Phone' && $phone_ext !== '') {
+                        $display_phone .= ' Ext. ' . esc_html($phone_ext);
+                    }
                     $photo_url = '';
                     if (isset($fields['Photo'])) {
                         if (is_array($fields['Photo']) && !empty($fields['Photo'])) {
@@ -149,10 +155,10 @@ class Airtable_Directory_Staff_Shortcode {
                         $output .= "<td>$dept</td>";
                     }
                     if (in_array('email', $visible_fields)) {
-                        $output .= ($email !== 'No Email' ? "<td><a href='mailto:$email'>$email</a></td>" : '<td></td>');
+                        $output .= ($email !== 'No Email' ? "<td><a href='mailto:$email'>" . $email_text . "</a></td>" : '<td></td>');
                     }
                     if (in_array('phone', $visible_fields)) {
-                        $output .= ($phone !== 'No Phone' ? "<td><a href='tel:" . preg_replace('/[^0-9+]/', '', $phone) . "'>$phone</a></td>" : '<td></td>');
+                        $output .= ($base_phone !== 'No Phone' ? "<td><a href='tel:" . preg_replace('/[^0-9+]/', '', $base_phone) . "'>" . $display_phone . "</a></td>" : '<td></td>');
                     }
                     $output .= '</tr>';
                 }
@@ -184,8 +190,14 @@ class Airtable_Directory_Staff_Shortcode {
                     $dept = !empty($department_names) ? implode(', ', $department_names) : 'No Department';
                 }
                 $email = isset($fields['Email']) ? esc_html($fields['Email']) : 'No Email';
-                $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
-
+                $email_text = isset($fields['Show Email As']) && trim($fields['Show Email As']) !== '' ? esc_html($fields['Show Email As']) : $email;
+                $base_phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
+                $phone_ext = isset($fields['Phone Extension']) ? trim((string)$fields['Phone Extension']) : '';
+                $display_phone = $base_phone;
+                if ($base_phone !== 'No Phone' && $phone_ext !== '') {
+                    $display_phone .= ' Ext. ' . esc_html($phone_ext);
+                }
+    
                 // Updated photo URL extraction to handle different possible structures
                 $photo_url = '';
                 if (isset($fields['Photo'])) {
@@ -233,10 +245,10 @@ class Airtable_Directory_Staff_Shortcode {
                     $output .= "$dept<br>";
                 }
                 if (in_array('email', $visible_fields) && $email !== 'No Email') {
-                    $output .= "<a href='mailto:$email'>$email</a><br>";
+                    $output .= "<a href='mailto:$email'>" . $email_text . "</a><br>";
                 }
-                if (in_array('phone', $visible_fields) && $phone !== 'No Phone') {
-                    $output .= "<a href='tel:" . preg_replace('/[^0-9+]/', '', $phone) . "'>$phone</a><br>";
+                if (in_array('phone', $visible_fields) && $base_phone !== 'No Phone') {
+                    $output .= "<a href='tel:" . preg_replace('/[^0-9+]/', '', $base_phone) . "'>" . $display_phone . "</a><br>";
                 }
                 $output .= "</div></div>";
             }

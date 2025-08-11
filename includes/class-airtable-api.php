@@ -153,7 +153,7 @@ class Airtable_Directory_API {
         $query_params = array(
             'filterByFormula' => "{Employee ID} = " . intval($employee_id),
             'maxRecords' => 1,
-            'fields' => array('Name', 'Title', 'Department', 'Email', 'Phone', 'Photo', 'Public', 'Employee ID')
+            'fields' => array('Name', 'Title', 'Department', 'Email', 'Phone', 'Photo', 'Public', 'Employee ID', 'Phone Extension', 'Show Email As')
         );
         
         $employees = $this->fetch_data(AIRTABLE_STAFF_TABLE_ID, $query_params);
@@ -280,7 +280,7 @@ class Airtable_Directory_API {
         
         // Get all staff records and filter by those who have this department's record ID in their Departments array
         $staff_query_params = array(
-            'fields' => array('Name', 'Title', 'Departments', 'Photo', 'Public', 'Featured', 'Email', 'Phone')
+            'fields' => array('Name', 'Title', 'Departments', 'Photo', 'Public', 'Featured', 'Email', 'Show Email As', 'Phone', 'Phone Extension')
         );
         
         $all_staff = $this->fetch_data(AIRTABLE_STAFF_TABLE_ID, $staff_query_params);

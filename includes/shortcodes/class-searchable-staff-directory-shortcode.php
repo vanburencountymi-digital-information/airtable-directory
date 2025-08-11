@@ -41,7 +41,7 @@ class Airtable_Directory_Searchable_Staff_Shortcode {
             $default_view = in_array($atts['default_view'], array('card', 'table')) ? $atts['default_view'] : 'card';
             
             // Fields to fetch - include Public field
-            $fields_to_fetch = array('Name', 'Title', 'Department', 'Email', 'Phone', 'Photo', 'Public');
+            $fields_to_fetch = array('Name', 'Title', 'Department', 'Email', 'Phone', 'Phone Extension', 'Show Email As', 'Photo', 'Public');
             
             // Get all staff members
             $staff_query_params = array(
@@ -110,7 +110,13 @@ class Airtable_Directory_Searchable_Staff_Shortcode {
                     $dept = !empty($department_names) ? implode(', ', $department_names) : 'No Department';
                 }
                 $email = isset($fields['Email']) ? esc_html($fields['Email']) : 'No Email';
-                $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
+                $email_text = isset($fields['Show Email As']) && trim($fields['Show Email As']) !== '' ? esc_html($fields['Show Email As']) : $email;
+                $base_phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
+                $phone_ext = isset($fields['Phone Extension']) ? trim((string)$fields['Phone Extension']) : '';
+                $display_phone = $base_phone;
+                if ($base_phone !== 'No Phone' && $phone_ext !== '') {
+                    $display_phone .= ' Ext. ' . esc_html($phone_ext);
+                }
                 
                 // Photo URL extraction (using your existing code)
                 $photo_url = '';
@@ -161,10 +167,10 @@ class Airtable_Directory_Searchable_Staff_Shortcode {
                     $output .= "$dept<br>";
                 }
                 if (in_array('email', $visible_fields) && $email !== 'No Email') {
-                    $output .= "Email: <a href='mailto:$email'>$email</a><br>";
+                    $output .= "Email: <a href='mailto:$email'>" . $email_text . "</a><br>";
                 }
-                if (in_array('phone', $visible_fields) && $phone !== 'No Phone') {
-                    $output .= "Phone: <a href='tel:" . preg_replace('/[^0-9+]/', '', $phone) . "'>$phone</a><br>";
+                if (in_array('phone', $visible_fields) && $base_phone !== 'No Phone') {
+                    $output .= "Phone: <a href='tel:" . preg_replace('/[^0-9+]/', '', $base_phone) . "'>" . $display_phone . "</a><br>";
                 }
                 $output .= "</div></div>";
             }
@@ -219,7 +225,13 @@ class Airtable_Directory_Searchable_Staff_Shortcode {
                     $dept = !empty($department_names) ? implode(', ', $department_names) : 'No Department';
                 }
                 $email = isset($fields['Email']) ? esc_html($fields['Email']) : 'No Email';
-                $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
+                $email_text = isset($fields['Show Email As']) && trim($fields['Show Email As']) !== '' ? esc_html($fields['Show Email As']) : $email;
+                $base_phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
+                $phone_ext = isset($fields['Phone Extension']) ? trim((string)$fields['Phone Extension']) : '';
+                $display_phone = $base_phone;
+                if ($base_phone !== 'No Phone' && $phone_ext !== '') {
+                    $display_phone .= ' Ext. ' . esc_html($phone_ext);
+                }
                 
                 // Photo URL extraction
                 $photo_url = '';
@@ -266,13 +278,13 @@ class Airtable_Directory_Searchable_Staff_Shortcode {
                 
                 if (in_array('email', $visible_fields)) {
                     $output .= "<td class='column-email' data-label='Email'>" . 
-                        ($email !== 'No Email' ? "<a href='mailto:$email'>$email</a>" : '') . 
+                        ($email !== 'No Email' ? "<a href='mailto:$email'>" . $email_text . "</a>" : '') . 
                         "</td>";
                 }
                 
                 if (in_array('phone', $visible_fields)) {
                     $output .= "<td class='column-phone' data-label='Phone'>" . 
-                        ($phone !== 'No Phone' ? "<a href='tel:" . preg_replace('/[^0-9+]/', '', $phone) . "'>$phone</a>" : '') . 
+                        ($base_phone !== 'No Phone' ? "<a href='tel:" . preg_replace('/[^0-9+]/', '', $base_phone) . "'>" . $display_phone . "</a>" : '') . 
                         "</td>";
                 }
                 

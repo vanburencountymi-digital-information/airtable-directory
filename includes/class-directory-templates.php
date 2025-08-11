@@ -151,6 +151,7 @@ class Airtable_Directory_Templates {
                         error_log("Filtering out '$dept_name' - has Parent ID: '" . $fields['Parent ID'] . "'");
                     } else {
                         // This department has no parent, so it becomes a category
+                        // (even if it's excluded from display, it can still serve as a category container)
                         $categories[] = $category;
                         error_log("Keeping '$dept_name' as category - no Parent ID found");
                     }
@@ -168,9 +169,13 @@ class Airtable_Directory_Templates {
                     // Get all departments that belong to this category (parent + children)
                     $category_departments = array();
                     
-                    // Add the parent department itself
-                    $category_departments[] = $category['department'];
-                    error_log("  -> Added parent department to category");
+                    // Add the parent department itself (only if not excluded)
+                    if (!$this->is_department_excluded($dept_name)) {
+                        $category_departments[] = $category['department'];
+                        error_log("  -> Added parent department to category");
+                    } else {
+                        error_log("  -> Excluded parent department '$dept_name' from display (category only)");
+                    }
                     
                     // Add all child departments recursively
                     if (!empty($dept_id)) {
@@ -189,8 +194,10 @@ class Airtable_Directory_Templates {
                     $fields = isset($dept['fields']) ? $dept['fields'] : array();
                     $dept_name = isset($fields['Department Name']) ? $fields['Department Name'] : '';
                     
-                    // Skip if no name
-                    if (empty($dept_name)) continue;
+                    // Skip if no name or if department is excluded
+                    if (empty($dept_name) || $this->is_department_excluded($dept_name)) {
+                        continue;
+                    }
                     
                     // Check if this department is already included in any category
                     $is_in_category = false;
@@ -498,8 +505,8 @@ class Airtable_Directory_Templates {
         }
         
         ?>
-        <div class="department-details">
-            <div class="department-header">
+        <div class="department-details card">
+            <div>
                 <?php if (!empty($photo_url)): ?>
                     <div class="department-photo-container">
                         <img src="<?php echo $photo_url; ?>" alt="Photo of <?php echo $name; ?> building" class="department-photo">
@@ -605,7 +612,9 @@ class Airtable_Directory_Templates {
                     $dept = !empty($department_names) ? implode(', ', $department_names) : '';
                 }
                 $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
+                $phone_extension = isset($fields['Phone Extension']) ? esc_html($fields['Phone Extension']) : '';
                 $email = isset($fields['Email']) ? esc_html($fields['Email']) : '';
+                $email_text = isset($fields['Show Email As']) ? esc_html($fields['Show Email As']) : '';
                 $emp_slug = $this->routes->generate_slug($name);
                 $emp_url = home_url('/directory/' . $emp_slug . '/');
 
@@ -648,10 +657,10 @@ class Airtable_Directory_Templates {
                         <span class="staff-department"><?php echo $dept; ?></span><br>
                     <?php endif; ?>
                     <?php if (!empty($display_fields['phone']) && !empty($phone)): ?>
-                        <span class="staff-phone"><a href="tel:<?php echo preg_replace('/[^0-9+]/', '', $phone); ?>"><?php echo $phone; ?></a></span><br>
+                        <span class="staff-phone"><a href="tel:<?php echo preg_replace('/[^0-9+]/', '', $phone); ?>"><?php echo $phone; ?><?php if (!empty($phone_extension)): ?> Ext. <?php echo $phone_extension; ?><?php endif; ?></a></span><br>
                     <?php endif; ?>
                     <?php if (!empty($display_fields['email']) && !empty($email)): ?>
-                        <span class="staff-email"><a href="mailto:<?php echo antispambot($email); ?>"><?php echo antispambot($email); ?></a></span><br>
+                        <span class="staff-email"><a href="mailto:<?php echo antispambot($email); ?>"><?php echo !empty($email_text) ? $email_text : antispambot($email); ?></a></span><br>
                     <?php endif; ?>
                 </div>
             </div>
@@ -689,7 +698,9 @@ class Airtable_Directory_Templates {
                         $dept = !empty($department_names) ? implode(', ', $department_names) : '';
                     }
                     $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
+                    $phone_extension = isset($fields['Phone Extension']) ? esc_html($fields['Phone Extension']) : '';
                     $email = isset($fields['Email']) ? esc_html($fields['Email']) : '';
+                    $email_text = isset($fields['Show Email As']) ? esc_html($fields['Show Email As']) : '';
                     $emp_slug = $this->routes->generate_slug($name);
                     $emp_url = home_url('/directory/' . $emp_slug . '/');
 
@@ -714,12 +725,16 @@ class Airtable_Directory_Templates {
                     $phone_link = '';
                     if (!empty($phone)) {
                         $tel = preg_replace('/[^0-9+]/', '', $phone);
-                        $phone_link = '<a href="tel:' . esc_attr($tel) . '">' . $phone . '</a>';
+                        $phone_link = '<a href="tel:' . esc_attr($tel) . '">' . $phone;
+                        if (!empty($phone_extension)) {
+                            $phone_link .= ' Ext. ' . $phone_extension;
+                        }
+                        $phone_link .= '</a>';
                     }
 
                     $email_link = '';
                     if (!empty($email)) {
-                        $email_link = '<a href="mailto:' . antispambot($email) . '">' . antispambot($email) . '</a>';
+                        $email_link = '<a href="mailto:' . antispambot($email) . '">' . (!empty($email_text) ? $email_text : antispambot($email)) . '</a>';
                     }
                 ?>
                 <tr>
@@ -1017,7 +1032,9 @@ class Airtable_Directory_Templates {
 
         // Add these lines to extract phone and email
         $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
+        $phone_extension = isset($fields['Phone Extension']) ? esc_html($fields['Phone Extension']) : '';
         $email = isset($fields['Email']) ? esc_html($fields['Email']) : '';
+        $email_text = isset($fields['Show Email As']) ? esc_html($fields['Show Email As']) : '';
 
         // Photo URL extraction logic (copied from class-shortcodes.php)
         $photo_url = '';
@@ -1070,10 +1087,10 @@ class Airtable_Directory_Templates {
                 
                 <div class="employee-contact">
                     <?php if (!empty($phone)): ?>
-                        <p><strong>Phone:</strong> <a href="tel:<?php echo preg_replace('/[^0-9+]/', '', $phone); ?>"><?php echo $phone; ?></a></p>
+                        <p><strong>Phone:</strong> <a href="tel:<?php echo preg_replace('/[^0-9+]/', '', $phone); ?>"><?php echo $phone; ?><?php if (!empty($phone_extension)): ?> Ext. <?php echo $phone_extension; ?><?php endif; ?></a></p>
                     <?php endif; ?>
                     <?php if (!empty($email)): ?>
-                        <p><strong>Email:</strong> <a href="mailto:<?php echo antispambot($email); ?>"><?php echo antispambot($email); ?></a></p>
+                        <p><strong>Email:</strong> <a href="mailto:<?php echo antispambot($email); ?>"><?php echo !empty($email_text) ? $email_text : antispambot($email); ?></a></p>
                     <?php endif; ?>
                     <?php if (empty($phone) && empty($email)): ?>
                         <p><em>No contact info found.</em></p>
@@ -1182,16 +1199,48 @@ class Airtable_Directory_Templates {
                 error_log("    Processing child: '$child_name'");
                 
                 if (!empty($child_name)) {
-                    // Add this child department to the category
-                    $category_departments[] = $child_dept;
-                    error_log("      -> Added '$child_name' to category");
+                    // Check if this child department should be excluded from display
+                    if (!$this->is_department_excluded($child_name)) {
+                        // Add this child department to the category
+                        $category_departments[] = $child_dept;
+                        error_log("      -> Added '$child_name' to category");
+                    } else {
+                        error_log("      -> Excluded child department '$child_name' from display (category only)");
+                    }
                     
-                    // Recursively add this child's children
-                    $this->add_child_departments_recursive($child_dept['id'], $child_departments_lookup, $all_departments_by_id, $category_departments);
+                    // Recursively add this child's children (regardless of whether this child is displayed)
+                    $child_id = isset($child_fields['Department ID']) ? $child_fields['Department ID'] : '';
+                    if (!empty($child_id)) {
+                        $this->add_child_departments_recursive($child_id, $child_departments_lookup, $all_departments_by_id, $category_departments);
+                    }
                 }
             }
         } else {
             error_log("    No children found for Parent ID '$parent_id'");
         }
+    }
+
+    /**
+     * Get departments that should be excluded from display (used as categories only)
+     *
+     * @return array Array of department names to exclude from display
+     */
+    private function get_excluded_departments() {
+        return array(
+            'Townships',
+            'Villages', 
+            'Cities'
+        );
+    }
+    
+    /**
+     * Check if a department should be excluded from display
+     *
+     * @param string $department_name The department name to check
+     * @return bool True if department should be excluded, false otherwise
+     */
+    private function is_department_excluded($department_name) {
+        $excluded_departments = $this->get_excluded_departments();
+        return in_array($department_name, $excluded_departments);
     }
 }
