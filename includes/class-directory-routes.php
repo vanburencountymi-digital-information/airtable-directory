@@ -144,6 +144,50 @@ class Airtable_Directory_Routes {
         // Fetch all departments
         $departments = $this->api->fetch_data(AIRTABLE_DEPARTMENT_TABLE);
         $slug_mappings = array();
+
+        // Build a set of excluded Department IDs for roots (Townships, Villages, Cities) and all their descendants
+        $excluded_root_names = array('Townships', 'Villages', 'Cities');
+        $excluded_ids = array();
+        $id_map = array();
+
+        // Build ID map for quick lookup
+        foreach ((array)$departments as $dept) {
+            $fields = isset($dept['fields']) ? $dept['fields'] : array();
+            $dept_id = isset($fields['Department ID']) ? $fields['Department ID'] : '';
+            if (!empty($dept_id)) {
+                $id_map[$dept_id] = $dept;
+            }
+        }
+
+        // Seed queue with excluded root IDs (by name)
+        $queue = array();
+        foreach ((array)$departments as $dept) {
+            $fields = isset($dept['fields']) ? $dept['fields'] : array();
+            $name = isset($fields['Department Name']) ? $fields['Department Name'] : '';
+            $dept_id = isset($fields['Department ID']) ? $fields['Department ID'] : '';
+            if (!empty($name) && in_array($name, $excluded_root_names, true) && !empty($dept_id)) {
+                $queue[] = $dept_id;
+            }
+        }
+
+        // BFS to collect all descendants by Parent ID
+        while (!empty($queue)) {
+            $current = array_shift($queue);
+            if (isset($excluded_ids[$current])) {
+                continue;
+            }
+            $excluded_ids[$current] = true;
+
+            // Enqueue children
+            foreach ((array)$departments as $dept) {
+                $fields = isset($dept['fields']) ? $dept['fields'] : array();
+                $parent_id = isset($fields['Parent ID']) ? $fields['Parent ID'] : '';
+                $child_id = isset($fields['Department ID']) ? $fields['Department ID'] : '';
+                if (!empty($parent_id) && $parent_id === $current && !empty($child_id) && !isset($excluded_ids[$child_id])) {
+                    $queue[] = $child_id;
+                }
+            }
+        }
         
         if ($departments) {
             foreach ($departments as $department) {
@@ -152,6 +196,11 @@ class Airtable_Directory_Routes {
                 // Use Department ID instead of field ID
                 $dept_id = isset($fields['Department ID']) ? $fields['Department ID'] : '';
                 
+                // Skip excluded roots and their descendants
+                if (!empty($dept_id) && isset($excluded_ids[$dept_id])) {
+                    continue;
+                }
+
                 if (!empty($dept_name) && !empty($dept_id)) {
                     $slug = $this->generate_slug($dept_name);
                     if (!empty($slug)) {

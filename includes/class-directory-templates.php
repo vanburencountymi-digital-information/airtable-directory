@@ -120,11 +120,43 @@ class Airtable_Directory_Templates {
                 error_log("Parent departments found: " . count($parent_departments));
                 error_log("Child department groups: " . count($child_departments));
                 
+                // Build exclusion set: 'Townships', 'Villages', 'Cities' and all their descendants
+                $excluded_root_names = array('Townships', 'Villages', 'Cities');
+                $excluded_ids = array();
+                $queue = array();
+                foreach ($departments as $dept) {
+                    $f = isset($dept['fields']) ? $dept['fields'] : array();
+                    $name = isset($f['Department Name']) ? $f['Department Name'] : '';
+                    $id = isset($f['Department ID']) ? $f['Department ID'] : '';
+                    if (!empty($name) && in_array($name, $excluded_root_names, true) && !empty($id)) {
+                        $queue[] = $id;
+                    }
+                }
+                while (!empty($queue)) {
+                    $current = array_shift($queue);
+                    if (isset($excluded_ids[$current])) { continue; }
+                    $excluded_ids[$current] = true;
+                    foreach ($departments as $dept) {
+                        $f = isset($dept['fields']) ? $dept['fields'] : array();
+                        $pid = isset($f['Parent ID']) ? $f['Parent ID'] : '';
+                        $cid = isset($f['Department ID']) ? $f['Department ID'] : '';
+                        if (!empty($pid) && $pid === $current && !empty($cid) && !isset($excluded_ids[$cid])) {
+                            $queue[] = $cid;
+                        }
+                    }
+                }
+                
                 // NEW LOGIC: Start with all departments as potential categories, then filter
                 $all_categories = array();
                 foreach ($departments as $dept) {
                     $fields = isset($dept['fields']) ? $dept['fields'] : array();
                     $dept_name = isset($fields['Department Name']) ? $fields['Department Name'] : '';
+                    $dept_id = isset($fields['Department ID']) ? $fields['Department ID'] : '';
+                    
+                    // Skip excluded roots and all descendants
+                    if (!empty($dept_id) && isset($excluded_ids[$dept_id])) {
+                        continue;
+                    }
                     
                     if (!empty($dept_name)) {
                         $all_categories[] = array(
@@ -179,46 +211,69 @@ class Airtable_Directory_Templates {
                     
                     // Add all child departments recursively
                     if (!empty($dept_id)) {
-                        $this->add_child_departments_recursive($dept_id, $child_departments, $all_departments_by_id, $category_departments);
+                        $visited = array();
+                        $this->add_child_departments_recursive($dept_id, $child_departments, $all_departments_by_id, $category_departments, $visited);
                     }
-                    error_log("  -> After adding children, category has " . count($category_departments) . " departments");
+                    
+                    // Filter out excluded IDs from this category and deduplicate
+                    $unique_by_id = array();
+                    $deduped = array();
+                    foreach ($category_departments as $cat_dept) {
+                        $cat_fields = isset($cat_dept['fields']) ? $cat_dept['fields'] : array();
+                        $cat_id = isset($cat_fields['Department ID']) ? $cat_fields['Department ID'] : '';
+                        if (empty($cat_id) || isset($excluded_ids[$cat_id])) {
+                            continue;
+                        }
+                        if (!isset($unique_by_id[$cat_id])) {
+                            $unique_by_id[$cat_id] = true;
+                            $deduped[] = $cat_dept;
+                        }
+                    }
+                    $category_departments = $deduped;
+                    error_log("  -> After adding children, filtering excluded, and de-dup, category has " . count($category_departments) . " departments");
                     
                     $category['departments'] = $category_departments;
                 }
+                // Prevent pesky foreach-by-reference side effects
+                unset($category);
                 
                 error_log("Categories created: " . count($categories));
                 
                 // Find truly uncategorized departments (those with no parent but not used as categories)
                 $uncategorized_departments = array();
+                // Build a set of all included department IDs across categories
+                $included_ids = array();
+                foreach ($categories as $category) {
+                    foreach ($category['departments'] as $cat_dept) {
+                        $cf = isset($cat_dept['fields']) ? $cat_dept['fields'] : array();
+                        if (!empty($cf['Department ID'])) {
+                            $included_ids[$cf['Department ID']] = true;
+                        }
+                    }
+                }
+                
                 foreach ($departments as $dept) {
                     $fields = isset($dept['fields']) ? $dept['fields'] : array();
                     $dept_name = isset($fields['Department Name']) ? $fields['Department Name'] : '';
+                    $dept_id = isset($fields['Department ID']) ? $fields['Department ID'] : '';
                     
-                    // Skip if no name or if department is excluded
-                    if (empty($dept_name) || $this->is_department_excluded($dept_name)) {
+                    // Skip if no name or if department is excluded by root/descendant rule
+                    if (empty($dept_name) || (!empty($dept_id) && isset($excluded_ids[$dept_id]))) {
                         continue;
                     }
                     
-                    // Check if this department is already included in any category
-                    $is_in_category = false;
-                    foreach ($categories as $category) {
-                        foreach ($category['departments'] as $cat_dept) {
-                            $cat_fields = isset($cat_dept['fields']) ? $cat_dept['fields'] : array();
-                            $cat_name = isset($cat_fields['Department Name']) ? $cat_fields['Department Name'] : '';
-                            if ($cat_name === $dept_name) {
-                                $is_in_category = true;
-                                break 2;
-                            }
-                        }
+                    // If department already included anywhere, skip
+                    if (!empty($dept_id) && isset($included_ids[$dept_id])) {
+                        continue;
                     }
                     
                     // Check if this department has a parent
                     $has_parent = isset($fields['Parent ID']) && !empty($fields['Parent ID']);
                     
                     // If not in any category and has no parent, it's uncategorized
-                    if (!$is_in_category && !$has_parent) {
+                    if (!$has_parent) {
                         $uncategorized_departments[] = $dept;
-                        error_log("Uncategorized department: '$dept_name'");
+                        error_log("Uncategorized department: '$dept_name' (ID: $dept_id)'");
                     }
                 }
                 
@@ -390,7 +445,7 @@ class Airtable_Directory_Templates {
             }
             
             // Show child departments if any
-            $child_departments = $this->api->get_child_departments($department_name);
+            $child_departments = $this->api->get_child_departments($department_data);
             error_log("Found " . count($child_departments) . " child departments for department " . $department_name);
             
             if (!empty($child_departments)) {
@@ -400,10 +455,10 @@ class Airtable_Directory_Templates {
                     $child_fields = isset($child_dept['fields']) ? $child_dept['fields'] : array();
                     $child_name = isset($child_fields['Department Name']) ? $child_fields['Department Name'] : 'Unknown Department';
                     
-                    if (!empty($child_name)) {
+                    if (!empty($child_name) && $child_name !== 'Unknown Department') {
                         echo '<div class="child-department-section">';
                         
-                        // Department details for child
+                        // Inline department details for child
                         $this->render_department_details($child_dept);
                         
                         // Staff in child department
@@ -479,7 +534,8 @@ class Airtable_Directory_Templates {
         $name = isset($fields['Department Name']) ? esc_html($fields['Department Name']) : 'Unknown Department';
         $physical_address = isset($fields['Physical Address']) ? nl2br(esc_html($fields['Physical Address'])) : '';
         $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
-        $url = isset($fields['URL']) ? esc_url($fields['URL']) : '';
+        $fax = isset($fields['Fax']) ? esc_html($fields['Fax']) : '';
+        $url = method_exists($this->api, 'resolve_department_website_url') ? esc_url($this->api->resolve_department_website_url($fields)) : (isset($fields['URL']) ? esc_url($fields['URL']) : '');
         
         // Photo URL extraction logic (same as staff photos)
         $photo_url = '';
@@ -547,6 +603,10 @@ class Airtable_Directory_Templates {
                     <div class="department-contact">
                         <?php if (!empty($phone)): ?>
                             <p><strong>Phone:</strong> <a href="tel:<?php echo preg_replace('/[^0-9+]/', '', $phone); ?>"><?php echo $phone; ?></a></p>
+                        <?php endif; ?>
+
+                        <?php if (!empty($fax)): ?>
+                            <p><strong>Fax: </strong> <?php echo $fax; ?></p>
                         <?php endif; ?>
                         
                         <?php if (!empty($url)): ?>
@@ -840,7 +900,7 @@ class Airtable_Directory_Templates {
         
         // Extract contact information
         $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
-        $url = isset($fields['URL']) ? esc_url($fields['URL']) : '';
+        $url = method_exists($this->api, 'resolve_department_website_url') ? esc_url($this->api->resolve_department_website_url($fields)) : (isset($fields['URL']) ? esc_url($fields['URL']) : '');
         $physical_address = isset($fields['Physical Address']) ? esc_html($fields['Physical Address']) : '';
         
         ?>
@@ -1081,8 +1141,8 @@ class Airtable_Directory_Templates {
                     <p class="employee-department">Department: <?php echo $dept; ?></p>
                 <?php endif; ?>
                 
-                <?php if (!empty($emp_id)): ?>
-                    <p class="employee-id">Employee ID: <?php echo $emp_id; ?></p>
+                <?php if (isset($fields['Employee ID'])): ?>
+                    <p class="employee-id">Employee ID: <?php echo esc_html($fields['Employee ID']); ?></p>
                 <?php endif; ?>
                 
                 <div class="employee-contact">
@@ -1186,8 +1246,17 @@ class Airtable_Directory_Templates {
      * @param array $all_departments_by_id Array of all departments indexed by ID
      * @param array $category_departments Reference to the array to which child departments will be added
      */
-    private function add_child_departments_recursive($parent_id, $child_departments_lookup, $all_departments_by_id, &$category_departments) {
+    private function add_child_departments_recursive($parent_id, $child_departments_lookup, $all_departments_by_id, &$category_departments, &$visited_ids = array()) {
         error_log("  Recursive call for parent ID: '$parent_id'");
+
+        // Prevent cycles/duplicates by tracking visited IDs
+        if (!empty($parent_id) && isset($visited_ids[$parent_id])) {
+            error_log("    Skipping parent ID '$parent_id' (already visited)");
+            return;
+        }
+        if (!empty($parent_id)) {
+            $visited_ids[$parent_id] = true;
+        }
         
         if (isset($child_departments_lookup[$parent_id])) {
             error_log("    Found " . count($child_departments_lookup[$parent_id]) . " children for Parent ID '$parent_id'");
@@ -1195,8 +1264,15 @@ class Airtable_Directory_Templates {
             foreach ($child_departments_lookup[$parent_id] as $child_dept) {
                 $child_fields = isset($child_dept['fields']) ? $child_dept['fields'] : array();
                 $child_name = isset($child_fields['Department Name']) ? $child_fields['Department Name'] : '';
+                $child_id = isset($child_fields['Department ID']) ? $child_fields['Department ID'] : '';
                 
-                error_log("    Processing child: '$child_name'");
+                error_log("    Processing child: '$child_name' (ID: '$child_id')");
+                
+                // Avoid re-adding already visited child
+                if (!empty($child_id) && isset($visited_ids[$child_id])) {
+                    error_log("      -> Skipping '$child_name' (already visited)");
+                    continue;
+                }
                 
                 if (!empty($child_name)) {
                     // Check if this child department should be excluded from display
@@ -1209,9 +1285,9 @@ class Airtable_Directory_Templates {
                     }
                     
                     // Recursively add this child's children (regardless of whether this child is displayed)
-                    $child_id = isset($child_fields['Department ID']) ? $child_fields['Department ID'] : '';
                     if (!empty($child_id)) {
-                        $this->add_child_departments_recursive($child_id, $child_departments_lookup, $all_departments_by_id, $category_departments);
+                        $visited_ids[$child_id] = true;
+                        $this->add_child_departments_recursive($child_id, $child_departments_lookup, $all_departments_by_id, $category_departments, $visited_ids);
                     }
                 }
             }

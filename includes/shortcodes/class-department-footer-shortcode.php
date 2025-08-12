@@ -75,7 +75,7 @@ class Airtable_Directory_Department_Footer_Shortcode {
         try {
             $atts = shortcode_atts(array(
                 'department' => '',
-                'show' => 'name,address,phone,fax,email,hours',
+                'show' => 'name,address,phone,fax,email,hours,additional',
                 'show_map_link' => 'yes',
                 'show_staff' => 'true',
                 'default_department' => '1' // Default department ID for administration building
@@ -145,6 +145,15 @@ class Airtable_Directory_Department_Footer_Shortcode {
                 $fax = isset($fields['Fax']) ? esc_html($fields['Fax']) : 'No fax available';
                 $hours = isset($fields['Hours']) ? esc_html($fields['Hours']) : 'No hours listed';
                 $email = isset($fields['Email']) ? esc_html($fields['Email']) : 'No email available';
+                $additional_info_raw = isset($fields['Additional Information']) ? $fields['Additional Information'] : '';
+                $additional_info = '';
+                if (!empty($additional_info_raw)) {
+                    // Escape first, then convert basic markdown, then linkify
+                    $escaped = esc_html($additional_info_raw);
+                    $markdown = $this->format_basic_markdown($escaped);
+                    $linked  = $this->linkify_contact_info($markdown);
+                    $additional_info = nl2br($linked);
+                }
                 
                 // Photo URL extraction logic (same as staff photos)
                 $photo_url = '';
@@ -172,17 +181,47 @@ class Airtable_Directory_Department_Footer_Shortcode {
                     $output .= '<div class="department-footer-header">';
                     $output .= '<div class="department-footer-title-row">';
                     $output .= '<div class="department-footer-title">';
-                    $output .= '<h2 id="contact">Contact Us</h2>';
+                    $output .= '<h2 id="contact">Contact Us</h2>'; 
                     $output .= '<p class="department-name dekoline dekoline-small">' . $name . '</p>';
                     $output .= '</div>';
                     
                     // Generate directory link using the slug system
                     $slug = $this->generate_directory_slug($name);
                     if (!empty($slug)) {
-                        $directory_url = home_url('/directory/' . $slug . '/');
-                        $output .= '<div class="department-footer-button">';
-                        $output .= '<a href="' . esc_url($directory_url) . '" class="directory-link-btn">View Directory</a>';
-                        $output .= '</div>';
+                        // Determine if this department is excluded from directory routes (Townships/Villages/Cities descendants)
+                        $is_excluded = false;
+                        $excluded_roots = array('Townships', 'Villages', 'Cities');
+                        $current = $fields;
+                        $parent_id = isset($current['Parent ID']) ? $current['Parent ID'] : '';
+                        // Walk up parent chain by Department ID to see if any ancestor is an excluded root
+                        $safety = 0;
+                        while (!empty($parent_id) && $safety < 20) {
+                            $safety++;
+                            $parent = $this->api->get_department_by_id($parent_id);
+                            if (!$parent) { break; }
+                            $pfields = isset($parent['fields']) ? $parent['fields'] : array();
+                            $pname = isset($pfields['Department Name']) ? $pfields['Department Name'] : '';
+                            if (!empty($pname) && in_array($pname, $excluded_roots, true)) {
+                                $is_excluded = true;
+                                break;
+                            }
+                            $parent_id = isset($pfields['Parent ID']) ? $pfields['Parent ID'] : '';
+                        }
+                        // Also exclude if this department itself is an excluded root
+                        if (in_array($name, $excluded_roots, true)) {
+                            $is_excluded = true;
+                        }
+                        
+                        if (!$is_excluded) {
+                            // Special case for county administration building - link to main directory
+                            $directory_url = ($slug === 'county-administration-building') 
+                                ? home_url('/directory/')
+                                : home_url('/directory/' . $slug . '/');
+                            
+                            $output .= '<div class="department-footer-button">';
+                            $output .= '<a href="' . esc_url($directory_url) . '" class="directory-link-btn">View Directory</a>';
+                            $output .= '</div>';
+                        }
                     }
                     
                     $output .= '</div>'; // End department-footer-title-row
@@ -253,6 +292,14 @@ class Airtable_Directory_Department_Footer_Shortcode {
                 if (!empty($phone_fax_email_content)) {
                     $output .= '<div class="department-footer-column">';
                     $output .= $phone_fax_email_content;
+                    $output .= '</div>';
+                }
+
+                // Additional Information column
+                if (in_array('additional', $visible_fields) && !empty($additional_info)) {
+                    $output .= '<div class="department-footer-column">';
+                    $output .= '<h3>Additional Information</h3>';
+                    $output .= '<div class="additional-info">' . wp_kses_post($additional_info) . '</div>';
                     $output .= '</div>';
                 }
                 
@@ -327,5 +374,54 @@ class Airtable_Directory_Department_Footer_Shortcode {
         }
         
         return $slug;
+    }
+
+    /**
+     * Linkify emails and phone numbers in a block of text.
+     * Assumes text is already escaped.
+     *
+     * @param string $text
+     * @return string
+     */
+    private function linkify_contact_info($text) {
+        // Linkify emails
+        $text = preg_replace_callback(
+            '/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,})/',
+            function ($m) {
+                $email = $m[1];
+                return '<a href="mailto:' . esc_attr($email) . '">' . esc_html($email) . '</a>';
+            },
+            $text
+        );
+
+        // Linkify US-style phone numbers with optional country code and extensions
+        $phone_pattern = '/\b(?:\+?1[\s\.-]?)?\(?\d{3}\)?[\s\.-]?\d{3}[\s\.-]?\d{4}\b(?:\s*(?:x|ext\.?|extension)\s*\d{1,5})?/i';
+        $text = preg_replace_callback(
+            $phone_pattern,
+            function ($m) {
+                $display = $m[0];
+                // Extract base numeric part for tel:
+                $tel = preg_replace('/[^0-9+]/', '', $display);
+                return '<a href="tel:' . esc_attr($tel) . '">' . esc_html($display) . '</a>';
+            },
+            $text
+        );
+
+        return $text;
+    }
+
+    /**
+     * Very basic markdown formatter for bold and italics after escaping.
+     * Supports **bold**, __bold__, *italic*, _italic_.
+     */
+    private function format_basic_markdown($text) {
+        // Bold: **text** or __text__
+        $text = preg_replace('/\*\*(.+?)\*\*/s', '<strong>$1</strong>', $text);
+        $text = preg_replace('/__(.+?)__/s', '<strong>$1</strong>', $text);
+        // Italic: *text* or _text_
+        // Avoid conflicting with bold (already handled). Use negative lookarounds to reduce clashes
+        $text = preg_replace('/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/s', '<em>$1</em>', $text);
+        $text = preg_replace('/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/s', '<em>$1</em>', $text);
+        return $text;
     }
 } 

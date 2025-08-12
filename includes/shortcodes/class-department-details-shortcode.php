@@ -93,6 +93,16 @@ class Airtable_Directory_Department_Details_Shortcode {
                 $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No phone available';
                 $fax = isset($fields['Fax']) ? esc_html($fields['Fax']) : 'No fax available';
                 $hours = isset($fields['Hours']) ? esc_html($fields['Hours']) : 'No hours listed';
+                $additional_info_raw = isset($fields['Additional Information']) ? $fields['Additional Information'] : '';
+                $additional_info = '';
+                if (!empty($additional_info_raw)) {
+                    $escaped = esc_html($additional_info_raw);
+                    // Convert basic markdown (bold/italic) after escaping, then linkify
+                    if (method_exists($this, 'format_basic_markdown')) {
+                        $escaped = $this->format_basic_markdown($escaped);
+                    }
+                    $additional_info = nl2br($this->linkify_contact_info($escaped));
+                }
                 
                 // Photo URL extraction logic (same as staff photos)
                 $photo_url = '';
@@ -201,6 +211,13 @@ class Airtable_Directory_Department_Details_Shortcode {
 
                 $output .= '</div>';
 
+                // Additional Information section (if present)
+                if (!empty($additional_info)) {
+                    $output .= '<div class="department-additional-information">';
+                    $output .= '<div class="additional-info">' . wp_kses_post($additional_info) . '</div>';
+                    $output .= '</div>';
+                }
+
                 // --- STAFF SECTION ---
                 if ($show_staff) {
                     // Get department name for staff lookup
@@ -293,5 +310,52 @@ class Airtable_Directory_Department_Details_Shortcode {
             error_log('Error in department_details_shortcode: ' . $e->getMessage());
             return '<p>An error occurred while retrieving department details. Please try again later.</p>';
         }
+    }
+    
+    /**
+     * Linkify emails and phone numbers in a block of text.
+     * Assumes text is already escaped.
+     *
+     * @param string $text
+     * @return string
+     */
+    private function linkify_contact_info($text) {
+        // Linkify emails
+        $text = preg_replace_callback(
+            '/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,})/',
+            function ($m) {
+                $email = $m[1];
+                return '<a href="mailto:' . esc_attr($email) . '">' . esc_html($email) . '</a>';
+            },
+            $text
+        );
+
+        // Linkify US-style phone numbers with optional country code and extensions
+        $phone_pattern = '/\b(?:\+?1[\s\.-]?)?\(?\d{3}\)?[\s\.-]?\d{3}[\s\.-]?\d{4}\b(?:\s*(?:x|ext\.?|extension)\s*\d{1,5})?/i';
+        $text = preg_replace_callback(
+            $phone_pattern,
+            function ($m) {
+                $display = $m[0];
+                $tel = preg_replace('/[^0-9+]/', '', $display);
+                return '<a href="tel:' . esc_attr($tel) . '">' . esc_html($display) . '</a>';
+            },
+            $text
+        );
+
+        return $text;
+    }
+
+    /**
+     * Very basic markdown formatter for bold and italics after escaping.
+     * Supports **bold**, __bold__, *italic*, _italic_.
+     */
+    private function format_basic_markdown($text) {
+        // Bold: **text** or __text__
+        $text = preg_replace('/\*\*(.+?)\*\*/s', '<strong>$1</strong>', $text);
+        $text = preg_replace('/__(.+?)__/s', '<strong>$1</strong>', $text);
+        // Italic: *text* or _text_
+        $text = preg_replace('/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/s', '<em>$1</em>', $text);
+        $text = preg_replace('/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/s', '<em>$1</em>', $text);
+        return $text;
     }
 } 

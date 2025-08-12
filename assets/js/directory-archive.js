@@ -12,6 +12,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let searchTimeout;
     
+    // Guard for pages without the search UI (e.g., single department pages)
+    if (!searchInput) {
+        return;
+    }
+    
     // Search functionality
     searchInput.addEventListener('input', function() {
         clearTimeout(searchTimeout);

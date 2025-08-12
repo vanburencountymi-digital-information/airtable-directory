@@ -162,14 +162,36 @@ class Airtable_Directory_API {
     }
     
     /**
-     * Get child departments for a parent department using Parent ID
+     * Get child departments for a parent department using Parent ID.
+     * Accepts a department record, a Department ID, or a Department Name.
      *
-     * @param string $parent_name Parent department name
+     * @param mixed $parent_identifier Department record array, Department ID, or Department Name
      * @return array Array of child department records
      */
-    public function get_child_departments($parent_name) {
+    public function get_child_departments($parent_identifier) {
+        $parent_id = '';
+
+        // If a department record array is provided
+        if (is_array($parent_identifier)) {
+            $fields = isset($parent_identifier['fields']) ? $parent_identifier['fields'] : array();
+            $parent_id = isset($fields['Department ID']) ? $fields['Department ID'] : '';
+        } else {
+            // Try resolving by department name first
+            $dept = $this->get_department_by_name($parent_identifier);
+            if ($dept && isset($dept['fields']['Department ID'])) {
+                $parent_id = $dept['fields']['Department ID'];
+            } else {
+                // Fallback: assume the provided value is already a Department ID
+                $parent_id = (string) $parent_identifier;
+            }
+        }
+
+        if (empty($parent_id)) {
+            return array();
+        }
+
         $query_params = array(
-            'filterByFormula' => "{Parent ID} = '" . addslashes($parent_name) . "'"
+            'filterByFormula' => "{Parent ID} = '" . addslashes($parent_id) . "'"
         );
         
         return $this->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $query_params);
@@ -413,6 +435,110 @@ class Airtable_Directory_API {
         error_log('Cleared all directory-related caches');
     }
     
+    /**
+     * Resolve department website URL using on-site data instead of Airtable URL when possible.
+     * Priority:
+     * 1) Page with meta 'department_id' matching Department ID
+     * 2) Page by slug derived from Department Name
+     * 3) Plugin directory route /directory/{slug}/
+     * 4) Fallback to Airtable 'URL' field
+     *
+     * @param array $department_fields Department record 'fields' from Airtable
+     * @return string URL
+     */
+    public function resolve_department_website_url($department_fields) {
+        $dept_id   = isset($department_fields['Department ID']) ? trim((string)$department_fields['Department ID']) : '';
+        $dept_name = isset($department_fields['Department Name']) ? trim((string)$department_fields['Department Name']) : '';
+        $airtable_url = isset($department_fields['URL']) ? trim((string)$department_fields['URL']) : '';
+
+        $cache_key_input = $dept_id !== '' ? $dept_id : $dept_name;
+        $transient_key = 'airtable_dept_home_url_' . md5($cache_key_input);
+        $cached = get_transient($transient_key);
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        // 1) Try finding a page by department_id meta
+        if ($dept_id !== '') {
+            $page = $this->find_page_by_department_id_meta($dept_id);
+            if ($page) {
+                $url = get_permalink($page);
+                set_transient($transient_key, $url, 12 * HOUR_IN_SECONDS);
+                return $url;
+            }
+        }
+
+        // 2) Try finding a page by slug from department name
+        if ($dept_name !== '') {
+            $slug = sanitize_title($dept_name);
+            $page = get_page_by_path($slug, OBJECT, array('page'));
+            if ($page) {
+                $url = get_permalink($page);
+                set_transient($transient_key, $url, 12 * HOUR_IN_SECONDS);
+                return $url;
+            }
+        }
+
+        // 3) Fallback to plugin directory route
+        if ($dept_name !== '') {
+            $slug = sanitize_title($dept_name);
+            $url = home_url('/directory/' . $slug . '/');
+            set_transient($transient_key, $url, 12 * HOUR_IN_SECONDS);
+            return $url;
+        }
+
+        // 4) Final fallback to Airtable URL if provided
+        if ($airtable_url !== '') {
+            set_transient($transient_key, $airtable_url, 12 * HOUR_IN_SECONDS);
+            return $airtable_url;
+        }
+
+        // Nothing found
+        set_transient($transient_key, '', 6 * HOUR_IN_SECONDS);
+        return '';
+    }
+
+    /**
+     * Find a WP page whose meta 'department_id' matches the given Department ID.
+     * Tries exact match first, then a LIKE match for comma-separated values.
+     *
+     * @param string $department_id
+     * @return WP_Post|null
+     */
+    private function find_page_by_department_id_meta($department_id) {
+        // Exact match first
+        $pages = get_posts(array(
+            'post_type'      => 'page',
+            'posts_per_page' => 1,
+            'meta_key'       => 'department_id',
+            'meta_value'     => $department_id,
+            'orderby'        => 'menu_order',
+            'order'          => 'ASC',
+            'suppress_filters' => true,
+        ));
+        if (!empty($pages)) {
+            return $pages[0];
+        }
+
+        // LIKE match to handle comma-separated meta values
+        global $wpdb;
+        $like = '%' . $wpdb->esc_like($department_id) . '%';
+        $post_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = 'department_id' AND meta_value LIKE %s LIMIT 10",
+            $like
+        ));
+        if (!empty($post_ids)) {
+            // Prefer the top-level ancestor if possible
+            foreach ($post_ids as $pid) {
+                $post = get_post($pid);
+                if ($post && $post->post_type === 'page' && $post->post_status === 'publish') {
+                    return $post;
+                }
+            }
+        }
+        return null;
+    }
+ 
     /**
      * Get all boards and committees
      *
