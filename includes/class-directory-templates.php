@@ -250,6 +250,53 @@ class Airtable_Directory_Templates {
                 
                 error_log("Categories created: " . count($categories));
                 
+                // Sort categories alphabetically by name
+                usort($categories, function($a, $b) {
+                    return strcasecmp($a['name'], $b['name']);
+                });
+                
+                // Sort departments within each category: category department first, then others alphabetically
+                foreach ($categories as &$category) {
+                    $category_departments = $category['departments'];
+                    $category_name = $category['name'];
+                    
+                    // Separate the category department from other departments
+                    $category_dept = null;
+                    $other_depts = array();
+                    
+                    foreach ($category_departments as $dept) {
+                        $fields = isset($dept['fields']) ? $dept['fields'] : array();
+                        $dept_name = isset($fields['Department Name']) ? $fields['Department Name'] : '';
+                        
+                        if ($dept_name === $category_name) {
+                            $category_dept = $dept;
+                        } else {
+                            $other_depts[] = $dept;
+                        }
+                    }
+                    
+                    // Sort other departments alphabetically
+                    usort($other_depts, function($a, $b) {
+                        $a_fields = isset($a['fields']) ? $a['fields'] : array();
+                        $b_fields = isset($b['fields']) ? $b['fields'] : array();
+                        $a_name = isset($a_fields['Department Name']) ? $a_fields['Department Name'] : '';
+                        $b_name = isset($b_fields['Department Name']) ? $b_fields['Department Name'] : '';
+                        return strcasecmp($a_name, $b_name);
+                    });
+                    
+                    // Rebuild the departments array with category department first
+                    $sorted_departments = array();
+                    if ($category_dept) {
+                        $sorted_departments[] = $category_dept;
+                    }
+                    $sorted_departments = array_merge($sorted_departments, $other_depts);
+                    
+                    $category['departments'] = $sorted_departments;
+                }
+                unset($category);
+                
+                error_log("Categories and departments sorted");
+                
                 // Find truly uncategorized departments (those with no parent but not used as categories)
                 $uncategorized_departments = array();
                 // Build a set of all included department IDs across categories
@@ -289,6 +336,16 @@ class Airtable_Directory_Templates {
                 }
                 
                 error_log("Uncategorized departments: " . count($uncategorized_departments));
+                
+                // Sort uncategorized departments alphabetically
+                usort($uncategorized_departments, function($a, $b) {
+                    $a_fields = isset($a['fields']) ? $a['fields'] : array();
+                    $b_fields = isset($b['fields']) ? $b['fields'] : array();
+                    $a_name = isset($a_fields['Department Name']) ? $a_fields['Department Name'] : '';
+                    $b_name = isset($b_fields['Department Name']) ? $b_fields['Department Name'] : '';
+                    return strcasecmp($a_name, $b_name);
+                });
+                
                 error_log("=== DIRECTORY DEBUG END ===");
                 ?>
 
@@ -969,7 +1026,17 @@ class Airtable_Directory_Templates {
                     <div class="child-departments">
                         <strong>Sub-departments:</strong>
                         <ul>
-                            <?php foreach ($child_departments as $child): ?>
+                            <?php 
+                            // Sort child departments alphabetically
+                            usort($child_departments, function($a, $b) {
+                                $a_fields = isset($a['fields']) ? $a['fields'] : array();
+                                $b_fields = isset($b['fields']) ? $b['fields'] : array();
+                                $a_name = isset($a_fields['Department Name']) ? $a_fields['Department Name'] : '';
+                                $b_name = isset($b_fields['Department Name']) ? $b_fields['Department Name'] : '';
+                                return strcasecmp($a_name, $b_name);
+                            });
+                            
+                            foreach ($child_departments as $child): ?>
                                 <?php 
                                 $child_fields = isset($child['fields']) ? $child['fields'] : array();
                                 $child_name = isset($child_fields['Department Name']) ? $child_fields['Department Name'] : 'Unknown';
@@ -1065,7 +1132,17 @@ class Airtable_Directory_Templates {
                     <div class="child-departments">
                         <strong>Sub-departments:</strong>
                         <ul>
-                            <?php foreach ($child_departments[$dept_name] as $child): ?>
+                            <?php 
+                            // Sort child departments alphabetically
+                            usort($child_departments[$dept_name], function($a, $b) {
+                                $a_fields = isset($a['fields']) ? $a['fields'] : array();
+                                $b_fields = isset($b['fields']) ? $b['fields'] : array();
+                                $a_name = isset($a_fields['Department Name']) ? $a_fields['Department Name'] : '';
+                                $b_name = isset($b_fields['Department Name']) ? $b_fields['Department Name'] : '';
+                                return strcasecmp($a_name, $b_name);
+                            });
+                            
+                            foreach ($child_departments[$dept_name] as $child): ?>
                                 <?php 
                                 $child_fields = isset($child['fields']) ? $child['fields'] : array();
                                 $child_name = isset($child_fields['Department Name']) ? $child_fields['Department Name'] : 'Unknown';
