@@ -1107,7 +1107,6 @@ class Airtable_Directory_Templates {
             }
             $dept = !empty($department_names) ? implode(', ', $department_names) : '';
         }
-        // $emp_id = isset($fields['Employee ID']) ? esc_html($fields['Employee ID']) : '';
 
         // Add these lines to extract phone and email
         $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
@@ -1158,10 +1157,6 @@ class Airtable_Directory_Templates {
                 
                 <?php if (!empty($dept)): ?>
                     <p class="employee-department">Department: <?php echo $dept; ?></p>
-                <?php endif; ?>
-                
-                <?php if (isset($fields['Employee ID'])): ?>
-                    <p class="employee-id">Employee ID: <?php echo esc_html($fields['Employee ID']); ?></p>
                 <?php endif; ?>
                 
                 <div class="employee-contact">
