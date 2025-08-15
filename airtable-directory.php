@@ -74,7 +74,10 @@ function airtable_directory_activation() {
     // Flush rewrite rules
     $routes->flush_rewrite_rules();
     
-    error_log('Airtable Directory plugin activated');
+    // Warm up caches to prevent initial cache misses
+    $routes->warm_up_caches();
+    
+    error_log('Airtable Directory plugin activated with cache warming');
 }
 
 // Plugin deactivation hook

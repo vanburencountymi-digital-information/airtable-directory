@@ -30,6 +30,9 @@ class Airtable_Directory_Routes {
         add_filter('query_vars', array($this, 'add_query_vars'));
         add_action('template_redirect', array($this, 'handle_directory_request'));
         
+        // Check and warm caches on first visit to prevent cache misses
+        add_action('wp', array($this, 'maybe_warm_caches'));
+        
         // Flush rewrite rules on plugin activation (we'll handle this in main plugin file)
         register_activation_hook(AIRTABLE_DIRECTORY_PLUGIN_DIR . 'airtable-directory.php', array($this, 'flush_rewrite_rules'));
     }
@@ -288,6 +291,7 @@ class Airtable_Directory_Routes {
     
     /**
      * Find what a slug represents (department or employee)
+     * Now includes data validation to prevent cache inconsistencies
      *
      * @param string $slug The slug to look up
      * @return array|false Array with type, id, and name, or false if not found
@@ -300,16 +304,68 @@ class Airtable_Directory_Routes {
         // Check departments first
         $dept_mappings = $this->get_department_slug_mappings();
         if (isset($dept_mappings[$slug])) {
-            return $dept_mappings[$slug];
+            $mapping = $dept_mappings[$slug];
+            
+            // Validate that the department actually exists in the data
+            if ($this->validate_department_exists($mapping)) {
+                return $mapping;
+            } else {
+                // Department mapping exists but data is missing - clear cache and retry
+                error_log("Department mapping exists for slug '$slug' but data validation failed - clearing cache");
+                $this->clear_slug_cache();
+                return $this->resolve_slug($slug); // Recursive call after cache clear
+            }
         }
         
         // Check employees
         $emp_mappings = $this->get_employee_slug_mappings();
         if (isset($emp_mappings[$slug])) {
-            return $emp_mappings[$slug];
+            $mapping = $emp_mappings[$slug];
+            
+            // Validate that the employee actually exists in the data
+            if ($this->validate_employee_exists($mapping)) {
+                return $mapping;
+            } else {
+                // Employee mapping exists but data is missing - clear cache and retry
+                error_log("Employee mapping exists for slug '$slug' but data validation failed - clearing cache");
+                $this->clear_slug_cache();
+                return $this->resolve_slug($slug); // Recursive call after cache clear
+            }
         }
         
         return false;
+    }
+    
+    /**
+     * Validate that a department mapping actually corresponds to existing data
+     *
+     * @param array $mapping The department mapping to validate
+     * @return bool True if department exists in data, false otherwise
+     */
+    private function validate_department_exists($mapping) {
+        if (!isset($mapping['type']) || $mapping['type'] !== 'department') {
+            return false;
+        }
+        
+        // Try to fetch the department data to ensure it exists
+        $dept_data = $this->api->get_department_by_name($mapping['name']);
+        return $dept_data !== false;
+    }
+    
+    /**
+     * Validate that an employee mapping actually corresponds to existing data
+     *
+     * @param array $mapping The employee mapping to validate
+     * @return bool True if employee exists in data, false otherwise
+     */
+    private function validate_employee_exists($mapping) {
+        if (!isset($mapping['type']) || $mapping['type'] !== 'employee') {
+            return false;
+        }
+        
+        // Try to fetch the employee data to ensure it exists
+        $emp_data = $this->api->get_employee_by_id($mapping['id']);
+        return $emp_data !== false;
     }
     
     /**
@@ -319,6 +375,63 @@ class Airtable_Directory_Routes {
         delete_transient('airtable_department_slugs');
         delete_transient('airtable_employee_slugs');
         error_log('Cleared directory slug caches');
+        
+        // Warm up caches immediately after clearing to prevent cache misses
+        $this->warm_up_caches();
+    }
+    
+    /**
+     * Warm up caches to prevent initial cache misses
+     * This should be called after cache clears or plugin activation
+     */
+    public function warm_up_caches() {
+        error_log('Warming up directory caches...');
+        
+        // Pre-fetch department data to ensure it's cached
+        $departments = $this->api->fetch_data(AIRTABLE_DEPARTMENT_TABLE);
+        error_log('Warmed up department cache with ' . count($departments) . ' departments');
+        
+        // Pre-fetch employee data to ensure it's cached
+        $query_params = array(
+            'fields' => array('Name', 'Employee ID', 'Public')
+        );
+        $employees = $this->api->fetch_data(AIRTABLE_STAFF_TABLE, $query_params);
+        error_log('Warmed up employee cache with ' . count($employees) . ' employees');
+        
+        // Generate slug mappings (this will use the now-cached data)
+        $dept_mappings = $this->get_department_slug_mappings();
+        $emp_mappings = $this->get_employee_slug_mappings();
+        
+        error_log('Generated ' . count($dept_mappings) . ' department slug mappings');
+        error_log('Generated ' . count($emp_mappings) . ' employee slug mappings');
+        
+        error_log('Directory caches warmed up successfully');
+    }
+    
+    /**
+     * Check if caches are warm and warm them up if needed
+     * This prevents the initial "no information found" issue
+     */
+    public function maybe_warm_caches() {
+        // Only check on directory pages
+        if (!is_page() && !is_404()) {
+            return;
+        }
+        
+        $current_url = $_SERVER['REQUEST_URI'] ?? '';
+        if (strpos($current_url, '/directory') === false) {
+            return;
+        }
+        
+        // Check if department cache exists
+        $dept_cache_exists = get_transient('airtable_department_slugs') !== false;
+        $emp_cache_exists = get_transient('airtable_employee_slugs') !== false;
+        
+        // If either cache is missing, warm up all caches
+        if (!$dept_cache_exists || !$emp_cache_exists) {
+            error_log('Directory caches not found, warming up on first visit');
+            $this->warm_up_caches();
+        }
     }
     
     /**

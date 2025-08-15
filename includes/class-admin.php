@@ -135,6 +135,15 @@ class Airtable_Directory_Admin {
             echo '<div class="notice notice-success"><p>Directory cache cleared successfully!</p></div>';
         }
         
+        // Check if cache warming was requested
+        if (isset($_POST['warm_caches']) && check_admin_referer('airtable_directory_warm_caches')) {
+            // Initialize routes to access warm_up_caches method
+            require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-directory-routes.php';
+            $routes = new Airtable_Directory_Routes($this->api);
+            $routes->warm_up_caches();
+            echo '<div class="notice notice-success"><p>Caches warmed up successfully!</p></div>';
+        }
+        
         // Check if board cache was cleared
         if (isset($_POST['clear_board_cache']) && check_admin_referer('airtable_directory_clear_board_cache')) {
             $this->api->clear_board_cache();
@@ -191,6 +200,14 @@ class Airtable_Directory_Admin {
                             <input type="submit" name="clear_directory_cache" class="button button-secondary" value="Clear Directory Cache">
                         </p>
                         <p class="description">This clears slug mappings and forces regeneration of directory URLs.</p>
+                    </form>
+                    
+                    <form method="post" action="" style="margin-bottom: 20px;">
+                        <?php wp_nonce_field('airtable_directory_warm_caches'); ?>
+                        <p class="submit">
+                            <input type="submit" name="warm_caches" class="button button-primary" value="Warm Up Caches">
+                        </p>
+                        <p class="description">This pre-loads all directory data and slug mappings to prevent cache misses.</p>
                     </form>
                 </div>
                 

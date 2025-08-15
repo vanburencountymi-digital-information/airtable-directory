@@ -53,6 +53,17 @@ class Airtable_Directory_Templates {
         // Get all departments for the index
         $departments = $this->api->fetch_data(AIRTABLE_DEPARTMENT_TABLE);
         
+        // If no departments found, try warming up caches and retry once
+        if (!$departments || empty($departments)) {
+            error_log("No departments found in directory index, attempting cache warm-up and retry");
+            $this->routes->warm_up_caches();
+            $departments = $this->api->fetch_data(AIRTABLE_DEPARTMENT_TABLE);
+            
+            if (!$departments || empty($departments)) {
+                error_log("Still no departments found after cache warm-up");
+            }
+        }
+        
         ob_start();
         ?>
         <div class="directory-archive-container">
@@ -63,7 +74,7 @@ class Airtable_Directory_Templates {
                 </div>
             </div>
             
-            <?php if ($departments): ?>
+            <?php if ($departments && !empty($departments)): ?>
                 <?php 
                 // DEBUG: Log all departments and their parent relationships
                 error_log("=== DIRECTORY DEBUG START ===");
@@ -384,9 +395,17 @@ class Airtable_Directory_Templates {
         $resolved = $this->routes->resolve_slug($slug);
         
         if (!$resolved) {
-            // Slug not found, show 404
-            $this->render_404();
-            return;
+            // Try warming up caches and retry once
+            error_log("Slug '$slug' not found, attempting cache warm-up and retry");
+            $this->routes->warm_up_caches();
+            $resolved = $this->routes->resolve_slug($slug);
+            
+            if (!$resolved) {
+                // Still not found after cache warm-up, show 404
+                error_log("Slug '$slug' still not found after cache warm-up");
+                $this->render_404();
+                return;
+            }
         }
         
         switch ($resolved['type']) {
