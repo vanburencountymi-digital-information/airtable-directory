@@ -525,7 +525,6 @@ class Airtable_Directory_Templates {
             error_log("Found " . count($child_departments) . " child departments for department " . $department_name);
             
             if (!empty($child_departments)) {
-                echo '<h3>Sub-Departments</h3>';
                 
                 foreach ($child_departments as $child_dept) {
                     $child_fields = isset($child_dept['fields']) ? $child_dept['fields'] : array();
@@ -538,7 +537,7 @@ class Airtable_Directory_Templates {
                         $this->render_department_details($child_dept);
                         
                         // Staff in child department
-                        echo '<h4>' . esc_html($child_name) . ' Staff</h4>';
+                        echo '<h3>' . esc_html($child_name) . ' Staff</h3>';
                         $child_staff = $this->api->get_staff_by_department($child_name);
                         if ($child_staff && count($child_staff) > 0) {
                             $this->render_staff_grid($child_staff);

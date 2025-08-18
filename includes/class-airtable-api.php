@@ -302,7 +302,7 @@ class Airtable_Directory_API {
         
         // Get all staff records and filter by those who have this department's record ID in their Departments array
         $staff_query_params = array(
-            'fields' => array('Name', 'Title', 'Departments', 'Photo', 'Public', 'Featured', 'Email', 'Show Email As', 'Phone', 'Phone Extension')
+            'fields' => array('Name', 'Title', 'Departments', 'Photo', 'Public', 'Featured', 'Email', 'Show Email As', 'Phone', 'Phone Extension', 'Display Order')
         );
         
         $all_staff = $this->fetch_data(AIRTABLE_STAFF_TABLE_ID, $staff_query_params);
@@ -333,6 +333,42 @@ class Airtable_Directory_API {
             $department_staff = $this->filter_public_staff($department_staff);
             error_log("After filtering for public staff: " . count($department_staff) . " results");
         }
+        
+        // Sort staff: Display Order (>= 0) first ascending, then the rest alphabetically by Name
+        $ordered = array();
+        $unordered = array();
+        foreach ($department_staff as $staff_record) {
+            $fields = isset($staff_record['fields']) ? $staff_record['fields'] : array();
+            $display_order = isset($fields['Display Order']) ? intval($fields['Display Order']) : -1;
+            if ($display_order >= 0) {
+                $ordered[] = $staff_record;
+            } else {
+                $unordered[] = $staff_record;
+            }
+        }
+        
+        usort($ordered, function($a, $b) {
+            $af = isset($a['fields']) ? $a['fields'] : array();
+            $bf = isset($b['fields']) ? $b['fields'] : array();
+            $ao = isset($af['Display Order']) ? intval($af['Display Order']) : 0;
+            $bo = isset($bf['Display Order']) ? intval($bf['Display Order']) : 0;
+            if ($ao === $bo) {
+                $an = isset($af['Name']) ? $af['Name'] : '';
+                $bn = isset($bf['Name']) ? $bf['Name'] : '';
+                return strcasecmp($an, $bn);
+            }
+            return ($ao < $bo) ? -1 : 1;
+        });
+        
+        usort($unordered, function($a, $b) {
+            $af = isset($a['fields']) ? $a['fields'] : array();
+            $bf = isset($b['fields']) ? $b['fields'] : array();
+            $an = isset($af['Name']) ? $af['Name'] : '';
+            $bn = isset($bf['Name']) ? $bf['Name'] : '';
+            return strcasecmp($an, $bn);
+        });
+        
+        $department_staff = array_merge($ordered, $unordered);
         
         return $department_staff;
     }
