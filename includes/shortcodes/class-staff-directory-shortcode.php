@@ -53,6 +53,29 @@ class Airtable_Directory_Staff_Shortcode {
                 if (empty($records)) {
                     return '<p>No staff members found for this department.</p>';
                 }
+                
+                // Override visible fields based on department settings
+                $department_show_fields = $this->api->get_department_show_fields($department_name);
+                
+                // If department show fields is empty (explicitly set to ['None']), hide all contact fields
+                if (empty($department_show_fields)) {
+                    $visible_fields = array_diff($visible_fields, array('phone', 'email'));
+                } else {
+                    if (in_array('Phone', $department_show_fields)) {
+                        if (!in_array('phone', $visible_fields)) {
+                            $visible_fields[] = 'phone';
+                        }
+                    } else {
+                        $visible_fields = array_diff($visible_fields, array('phone'));
+                    }
+                    if (in_array('Email', $department_show_fields)) {
+                        if (!in_array('email', $visible_fields)) {
+                            $visible_fields[] = 'email';
+                        }
+                    } else {
+                        $visible_fields = array_diff($visible_fields, array('email'));
+                    }
+                }
             } else {
                 // If no department is specified, list all staff records.
                 $staff_query_params = array(
@@ -116,7 +139,7 @@ class Airtable_Directory_Staff_Shortcode {
                     $base_phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
                     $phone_ext = isset($fields['Phone Extension']) ? trim((string)$fields['Phone Extension']) : '';
                     $display_phone = $base_phone;
-                    if ($base_phone !== 'No Phone' && $phone_ext !== '') {
+                    if ($base_phone !== 'No Phone' && $phone_ext !== '' && in_array('Phone Extension', $department_show_fields)) {
                         $display_phone .= ' Ext. ' . esc_html($phone_ext);
                     }
                     $photo_url = '';
@@ -194,7 +217,12 @@ class Airtable_Directory_Staff_Shortcode {
                 $base_phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No Phone';
                 $phone_ext = isset($fields['Phone Extension']) ? trim((string)$fields['Phone Extension']) : '';
                 $display_phone = $base_phone;
-                if ($base_phone !== 'No Phone' && $phone_ext !== '') {
+                // Use department show fields if available, otherwise show all
+                $show_phone_ext = true; // Default to showing extensions
+                if (!empty($atts['department'])) {
+                    $show_phone_ext = !empty($department_show_fields) && in_array('Phone Extension', $department_show_fields);
+                }
+                if ($base_phone !== 'No Phone' && $phone_ext !== '' && $show_phone_ext) {
                     $display_phone .= ' Ext. ' . esc_html($phone_ext);
                 }
     

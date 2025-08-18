@@ -515,7 +515,7 @@ class Airtable_Directory_Templates {
             error_log("Found " . count($staff_members) . " staff members for department " . $department_name);
             
             if ($staff_members && count($staff_members) > 0) {
-                $this->render_staff_grid($staff_members);
+                $this->render_staff_grid($staff_members, $department_name);
             } else {
                 echo '<p>No staff members found for this department.</p>';
             }
@@ -540,7 +540,7 @@ class Airtable_Directory_Templates {
                         echo '<h3>' . esc_html($child_name) . ' Staff</h3>';
                         $child_staff = $this->api->get_staff_by_department($child_name);
                         if ($child_staff && count($child_staff) > 0) {
-                            $this->render_staff_grid($child_staff);
+                            $this->render_staff_grid($child_staff, $child_name);
                         } else {
                             echo '<p>No staff members found for this sub-department.</p>';
                         }
@@ -698,8 +698,9 @@ class Airtable_Directory_Templates {
      * Render staff grid using existing card styling
      *
      * @param array $staff_members Array of staff member records
+     * @param string $department_name Department name for field filtering (optional)
      */
-    private function render_staff_grid($staff_members) {
+    private function render_staff_grid($staff_members, $department_name = '') {
         if (empty($staff_members)) {
             echo '<p>No staff members found.</p>';
             return;
@@ -716,6 +717,24 @@ class Airtable_Directory_Templates {
             'email' => 1,
             'department' => 1,
         ));
+        
+        // Override display fields based on department settings if department name is provided
+        if (!empty($department_name)) {
+            $department_show_fields = $this->api->get_department_show_fields($department_name);
+            
+            // If department show fields is empty (explicitly set to ['None']), hide all contact fields
+            if (empty($department_show_fields)) {
+                $display_fields['phone'] = 0;
+                $display_fields['email'] = 0;
+                $display_fields['phone_extension'] = 0;
+            } else {
+                // Update display fields based on department configuration
+                $display_fields['phone'] = in_array('Phone', $department_show_fields) ? 1 : 0;
+                $display_fields['email'] = in_array('Email', $department_show_fields) ? 1 : 0;
+                // Add phone extension as a separate display field
+                $display_fields['phone_extension'] = in_array('Phone Extension', $department_show_fields) ? 1 : 0;
+            }
+        }
 ?>
 <div class="staff-directory-toggle-container" id="<?php echo $directory_id; ?>">
     <div class="directory-control-bar">
@@ -792,7 +811,7 @@ class Airtable_Directory_Templates {
                         <span class="staff-department"><?php echo $dept; ?></span><br>
                     <?php endif; ?>
                     <?php if (!empty($display_fields['phone']) && !empty($phone)): ?>
-                        <span class="staff-phone"><a href="tel:<?php echo preg_replace('/[^0-9+]/', '', $phone); ?>"><?php echo $phone; ?><?php if (!empty($phone_extension)): ?> Ext. <?php echo $phone_extension; ?><?php endif; ?></a></span><br>
+                        <span class="staff-phone"><a href="tel:<?php echo preg_replace('/[^0-9+]/', '', $phone); ?>"><?php echo $phone; ?><?php if (!empty($display_fields['phone_extension']) && !empty($phone_extension)): ?> Ext. <?php echo $phone_extension; ?><?php endif; ?></a></span><br>
                     <?php endif; ?>
                     <?php if (!empty($display_fields['email']) && !empty($email)): ?>
                         <span class="staff-email"><a href="mailto:<?php echo antispambot($email); ?>"><?php echo !empty($email_text) ? $email_text : antispambot($email); ?></a></span><br>
@@ -861,7 +880,7 @@ class Airtable_Directory_Templates {
                     if (!empty($phone)) {
                         $tel = preg_replace('/[^0-9+]/', '', $phone);
                         $phone_link = '<a href="tel:' . esc_attr($tel) . '">' . $phone;
-                        if (!empty($phone_extension)) {
+                        if (!empty($display_fields['phone_extension']) && !empty($phone_extension)) {
                             $phone_link .= ' Ext. ' . $phone_extension;
                         }
                         $phone_link .= '</a>';
@@ -1163,7 +1182,7 @@ class Airtable_Directory_Templates {
     }
     
     /**
-     * Render employee profile details
+     * Render employee profile with department-specific field filtering
      *
      * @param array $employee_data Employee data from Airtable
      */
@@ -1172,23 +1191,22 @@ class Airtable_Directory_Templates {
         
         $name = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
         $title = isset($fields['Title']) ? esc_html($fields['Title']) : '';
-        $dept = '';
-        if (isset($fields['Departments']) && is_array($fields['Departments'])) {
-            $department_names = array();
-            foreach ($fields['Departments'] as $dept_record_id) {
-                $dept_record = $this->api->get_department_by_record_id($dept_record_id);
-                if ($dept_record && isset($dept_record['fields']['Department Name'])) {
-                    $department_names[] = $dept_record['fields']['Department Name'];
-                }
-            }
-            $dept = !empty($department_names) ? implode(', ', $department_names) : '';
-        }
+        
+        // Use the Department field (singular) which contains the department name directly
+        $dept = isset($fields['Department']) ? esc_html($fields['Department']) : '';
+        $primary_department = $dept; // Use the department name directly
 
         // Add these lines to extract phone and email
         $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : '';
         $phone_extension = isset($fields['Phone Extension']) ? esc_html($fields['Phone Extension']) : '';
         $email = isset($fields['Email']) ? esc_html($fields['Email']) : '';
         $email_text = isset($fields['Show Email As']) ? esc_html($fields['Show Email As']) : '';
+
+        // Get department's show fields configuration
+        $department_show_fields = array();
+        if (!empty($primary_department)) {
+            $department_show_fields = $this->api->get_department_show_fields($primary_department);
+        }
 
         // Photo URL extraction logic (copied from class-shortcodes.php)
         $photo_url = '';
@@ -1236,14 +1254,29 @@ class Airtable_Directory_Templates {
                 <?php endif; ?>
                 
                 <div class="employee-contact">
-                    <?php if (!empty($phone)): ?>
-                        <p><strong>Phone:</strong> <a href="tel:<?php echo preg_replace('/[^0-9+]/', '', $phone); ?>"><?php echo $phone; ?><?php if (!empty($phone_extension)): ?> Ext. <?php echo $phone_extension; ?><?php endif; ?></a></p>
+                    <?php 
+                    // department_show_fields will be:
+                    // - empty array [] if Show Fields is ['None'] (hide all)
+                    // - ['Phone', 'Phone Extension', 'Email'] if no configuration (show all)
+                    // - specific fields if configured
+                    $show_phone = in_array('Phone', $department_show_fields);
+                    $show_phone_extension = in_array('Phone Extension', $department_show_fields);
+                    $show_email = in_array('Email', $department_show_fields);
+                    
+                    $contact_info_shown = false;
+                    
+                    if ($show_phone && !empty($phone)): 
+                        $contact_info_shown = true;
+                    ?>
+                        <p><strong>Phone:</strong> <a href="tel:<?php echo preg_replace('/[^0-9+]/', '', $phone); ?>"><?php echo $phone; ?><?php if ($show_phone_extension && !empty($phone_extension)): ?> Ext. <?php echo $phone_extension; ?><?php endif; ?></a></p>
                     <?php endif; ?>
-                    <?php if (!empty($email)): ?>
+                    <?php if ($show_email && !empty($email)): 
+                        $contact_info_shown = true;
+                    ?>
                         <p><strong>Email:</strong> <a href="mailto:<?php echo antispambot($email); ?>"><?php echo !empty($email_text) ? $email_text : antispambot($email); ?></a></p>
                     <?php endif; ?>
-                    <?php if (empty($phone) && empty($email)): ?>
-                        <p><em>No contact info found.</em></p>
+                    <?php if (!$contact_info_shown): ?>
+                        <p><em>No contact info available.</em></p>
                     <?php endif; ?>
                 </div>
             </div>

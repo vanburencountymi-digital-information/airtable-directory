@@ -135,7 +135,8 @@ class Airtable_Directory_API {
     public function get_department_by_name($department_name) {
         $query_params = array(
             'filterByFormula' => "{Department Name} = '" . addslashes($department_name) . "'",
-            'maxRecords' => 1
+            'maxRecords' => 1,
+            'fields' => array('Department Name', 'Department ID', 'Parent ID', 'Phone', 'URL', 'Physical Address', 'Photo', 'Show Fields')
         );
         
         $departments = $this->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $query_params);
@@ -395,12 +396,57 @@ class Airtable_Directory_API {
     public function get_department_by_record_id($record_id) {
         $query_params = array(
             'filterByFormula' => "RECORD_ID() = '$record_id'",
-            'maxRecords' => 1
+            'maxRecords' => 1,
+            'fields' => array('Department Name', 'Department ID', 'Parent ID', 'Phone', 'URL', 'Physical Address', 'Photo', 'Show Fields')
         );
         
         $departments = $this->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $query_params);
         
         return !empty($departments) ? $departments[0] : false;
+    }
+    
+    /**
+     * Get department's show fields configuration
+     *
+     * @param string $department_name Department name
+     * @return array Array of fields that should be shown for this department
+     */
+    public function get_department_show_fields($department_name) {
+        $department = $this->get_department_by_name($department_name);
+        if (!$department || !isset($department['fields']['Show Fields'])) {
+            // Default to showing all fields if no configuration is set
+            return array('Phone', 'Phone Extension', 'Email');
+        }
+        
+        $show_fields = $department['fields']['Show Fields'];
+        if (!is_array($show_fields)) {
+            // If it's a single value, convert to array
+            $show_fields = array($show_fields);
+        }
+        
+        // If Show Fields is explicitly set to ['None'], return empty array
+        if (count($show_fields) === 1 && $show_fields[0] === 'None') {
+            return array();
+        }
+        
+        // If Show Fields is empty or not set, show all fields
+        if (empty($show_fields)) {
+            return array('Phone', 'Phone Extension', 'Email');
+        }
+        
+        return $show_fields;
+    }
+    
+    /**
+     * Check if a specific field should be shown for a department
+     *
+     * @param string $department_name Department name
+     * @param string $field_name Field name to check (Phone, Phone Extension, Email)
+     * @return bool True if field should be shown
+     */
+    public function should_show_field_for_department($department_name, $field_name) {
+        $show_fields = $this->get_department_show_fields($department_name);
+        return in_array($field_name, $show_fields);
     }
     
     /**
