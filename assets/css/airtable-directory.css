@@ -1402,3 +1402,129 @@
         font-size: 1.2em;
     }
 }
+
+/* CF7 Contact Form Integration Styles */
+.employee-contact-form,
+.department-contact-form {
+    margin-top: 2em;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.employee-contact-form h3,
+.department-contact-form h3 {
+    margin-top: 0;
+    margin-bottom: 1em;
+    color: #333;
+    border-bottom: 2px solid #0073aa;
+    padding-bottom: 10px;
+}
+
+.vbc-contacting-badge {
+    background-color: #0073aa;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 1em;
+    font-weight: 500;
+    text-align: center;
+}
+
+.vbc-contacting-badge[aria-live="polite"] {
+    font-size: 14px;
+}
+
+/* CF7 Form Styling */
+.employee-contact-form .wpcf7-form,
+.department-contact-form .wpcf7-form {
+    max-width: 100%;
+}
+
+.employee-contact-form .wpcf7-form p,
+.department-contact-form .wpcf7-form p {
+    margin-bottom: 15px;
+}
+
+.employee-contact-form .wpcf7-form label,
+.department-contact-form .wpcf7-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #333;
+}
+
+.employee-contact-form .wpcf7-form input[type="text"],
+.employee-contact-form .wpcf7-form input[type="email"],
+.employee-contact-form .wpcf7-form input[type="tel"],
+.employee-contact-form .wpcf7-form textarea,
+.department-contact-form .wpcf7-form input[type="text"],
+.department-contact-form .wpcf7-form input[type="email"],
+.department-contact-form .wpcf7-form input[type="tel"],
+.department-contact-form .wpcf7-form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.employee-contact-form .wpcf7-form input[type="submit"],
+.department-contact-form .wpcf7-form input[type="submit"] {
+    background-color: #0073aa;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.employee-contact-form .wpcf7-form input[type="submit"]:hover,
+.department-contact-form .wpcf7-form input[type="submit"]:hover {
+    background-color: #005a87;
+}
+
+.employee-contact-form .wpcf7-form .wpcf7-response-output,
+.department-contact-form .wpcf7-form .wpcf7-response-output {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.employee-contact-form .wpcf7-form .wpcf7-response-output.wpcf7-mail-sent-ok,
+.department-contact-form .wpcf7-form .wpcf7-response-output.wpcf7-mail-sent-ok {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.employee-contact-form .wpcf7-form .wpcf7-response-output.wpcf7-validation-errors,
+.department-contact-form .wpcf7-form .wpcf7-response-output.wpcf7-validation-errors {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+/* Responsive Design for Contact Forms */
+@media screen and (max-width: 768px) {
+    .employee-contact-form,
+    .department-contact-form {
+        padding: 15px;
+        margin-top: 1.5em;
+    }
+    
+    .employee-contact-form h3,
+    .department-contact-form h3 {
+        font-size: 1.3em;
+    }
+    
+    .vbc-contacting-badge {
+        font-size: 13px;
+        padding: 8px 12px;
+    }
+}

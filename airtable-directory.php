@@ -38,6 +38,7 @@ require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-airtable-directory.
 require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-shortcodes.php';
 require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-admin.php';
 require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-directory-routes.php';
+require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-cf7-integration.php';
 
 // Initialize the plugin
 function airtable_directory_init() {
@@ -50,8 +51,11 @@ function airtable_directory_init() {
     // Initialize shortcodes
     $shortcodes = new Airtable_Directory_Shortcodes($api);
     
+    // Initialize CF7 integration
+    $cf7_integration = new Airtable_Directory_CF7_Integration($api);
+    
     // Initialize directory routes
-    $routes = new Airtable_Directory_Routes($api);
+    $routes = new Airtable_Directory_Routes($api, $cf7_integration);
     
     // Initialize admin (only if in admin area)
     if (is_admin()) {
@@ -69,7 +73,8 @@ register_activation_hook(__FILE__, 'airtable_directory_activation');
 function airtable_directory_activation() {
     // Initialize API and routes for activation
     $api = new Airtable_Directory_API();
-    $routes = new Airtable_Directory_Routes($api);
+    $cf7_integration = new Airtable_Directory_CF7_Integration($api);
+    $routes = new Airtable_Directory_Routes($api, $cf7_integration);
     
     // Flush rewrite rules
     $routes->flush_rewrite_rules();

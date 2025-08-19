@@ -136,7 +136,7 @@ class Airtable_Directory_API {
         $query_params = array(
             'filterByFormula' => "{Department Name} = '" . addslashes($department_name) . "'",
             'maxRecords' => 1,
-            'fields' => array('Department Name', 'Department ID', 'Parent ID', 'Phone', 'URL', 'Physical Address', 'Photo', 'Show Fields')
+            'fields' => array('Department Name', 'Department ID', 'Parent ID', 'Phone', 'URL', 'Physical Address', 'Photo', 'Show Fields', 'Email')
         );
         
         $departments = $this->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $query_params);

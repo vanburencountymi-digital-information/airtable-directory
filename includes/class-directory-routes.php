@@ -13,12 +13,21 @@ class Airtable_Directory_Routes {
     private $api;
     
     /**
+     * CF7 integration instance
+     *
+     * @var Airtable_Directory_CF7_Integration
+     */
+    private $cf7;
+    
+    /**
      * Constructor
      *
      * @param Airtable_Directory_API $api API instance
+     * @param Airtable_Directory_CF7_Integration $cf7_integration CF7 integration instance (optional)
      */
-    public function __construct($api) {
+    public function __construct($api, $cf7_integration = null) {
         $this->api = $api;
+        $this->cf7 = $cf7_integration;
         $this->init_hooks();
     }
     
@@ -80,7 +89,7 @@ class Airtable_Directory_Routes {
         
         // Load the template handler
         require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-directory-templates.php';
-        $template_handler = new Airtable_Directory_Templates($this->api);
+        $template_handler = new Airtable_Directory_Templates($this->api, $this->cf7);
         
         switch ($directory_page) {
             case 'index':

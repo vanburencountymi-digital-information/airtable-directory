@@ -27,11 +27,19 @@ class Airtable_Directory_Templates {
     private $shortcodes;
     
     /**
+     * CF7 integration instance
+     *
+     * @var Airtable_Directory_CF7_Integration
+     */
+    private $cf7;
+    
+    /**
      * Constructor
      *
      * @param Airtable_Directory_API $api API instance
+     * @param Airtable_Directory_CF7_Integration $cf7_integration CF7 integration instance (optional)
      */
-    public function __construct($api) {
+    public function __construct($api, $cf7_integration = null) {
         $this->api = $api;
         
         // Initialize routes handler
@@ -41,6 +49,8 @@ class Airtable_Directory_Templates {
         // Initialize shortcodes handler to reuse existing functionality
         require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-shortcodes.php';
         $this->shortcodes = new Airtable_Directory_Shortcodes($api);
+        
+        $this->cf7 = $cf7_integration; // pass from bootstrap
     }
     
     /**
@@ -549,6 +559,13 @@ class Airtable_Directory_Templates {
                     }
                 }
             }
+            
+            if ($this->cf7) {
+                echo '<div class="department-contact-form">';
+                echo '<h3>Contact ' . esc_html($department_name) . '</h3>';
+                echo $this->cf7->render_contact_block('department', $department_name, $department_name);
+                echo '</div>';
+            }
             ?>
         </div>
         <?php
@@ -591,6 +608,15 @@ class Airtable_Directory_Templates {
             <div class="employee-profile">
                 <?php $this->render_employee_profile($employee_data); ?>
             </div>
+            
+            <?php 
+            if ($this->cf7) {
+                echo '<div class="employee-contact-form">';
+                echo '<h3>Contact ' . esc_html($employee_name) . '</h3>';
+                echo $this->cf7->render_contact_block('employee', $employee_id, $employee_name);
+                echo '</div>';
+            }
+            ?>
         </div>
         <?php
         

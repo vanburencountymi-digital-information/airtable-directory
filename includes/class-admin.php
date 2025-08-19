@@ -317,6 +317,11 @@ class Airtable_Directory_Admin {
      */
     public function register_display_settings() {
         register_setting('airtable-directory-display-settings', 'airtable_directory_display_fields');
+        
+        // CF7 Integration Settings
+        register_setting('airtable-directory-display-settings', Airtable_Directory_CF7_Integration::OPT_CF7_FORM_ID);
+        register_setting('airtable-directory-display-settings', Airtable_Directory_CF7_Integration::OPT_RATE_LIMIT_MAX);
+        register_setting('airtable-directory-display-settings', Airtable_Directory_CF7_Integration::OPT_RATE_LIMIT_SECONDS);
 
         add_settings_section(
             'airtable_directory_display_section',
@@ -333,6 +338,32 @@ class Airtable_Directory_Admin {
             array($this, 'display_fields_callback'),
             'airtable-directory-display-settings',
             'airtable_directory_display_section'
+        );
+        
+        // CF7 Integration Section
+        add_settings_section(
+            'airtable_directory_cf7_section',
+            'Contact Forms 7 Integration',
+            function() {
+                echo '<p>Configure Contact Forms 7 integration for employee and department contact forms.</p>';
+            },
+            'airtable-directory-display-settings'
+        );
+        
+        add_settings_field(
+            'airdir_cf7_form_id',
+            'CF7 Form ID',
+            array($this, 'cf7_form_id_callback'),
+            'airtable-directory-display-settings',
+            'airtable_directory_cf7_section'
+        );
+        
+        add_settings_field(
+            'airdir_cf7_rate_limit',
+            'Rate Limit',
+            array($this, 'cf7_rate_limit_callback'),
+            'airtable-directory-display-settings',
+            'airtable_directory_cf7_section'
         );
     }
 
@@ -364,6 +395,26 @@ class Airtable_Directory_Admin {
             </label><br>
             <?php
         }
+    }
+    
+    /**
+     * Callback for the CF7 form ID setting
+     */
+    public function cf7_form_id_callback() {
+        $form_id = get_option(Airtable_Directory_CF7_Integration::OPT_CF7_FORM_ID, '');
+        echo '<input type="text" name="' . esc_attr(Airtable_Directory_CF7_Integration::OPT_CF7_FORM_ID) . '" value="' . esc_attr($form_id) . '" placeholder="e.g., a46061f" style="width: 200px;" />';
+        echo '<p class="description">Enter the Contact Form 7 form ID (e.g., a46061f) to use for employee and department contact forms. You can find this ID in the Contact Forms 7 admin interface.</p>';
+    }
+    
+    /**
+     * Callback for the CF7 rate limit setting
+     */
+    public function cf7_rate_limit_callback() {
+        $max = (int) get_option(Airtable_Directory_CF7_Integration::OPT_RATE_LIMIT_MAX, 40);
+        $win = (int) get_option(Airtable_Directory_CF7_Integration::OPT_RATE_LIMIT_SECONDS, 600);
+        echo 'Max <input type="number" min="1" name="' . esc_attr(Airtable_Directory_CF7_Integration::OPT_RATE_LIMIT_MAX) . '" value="' . esc_attr($max) . '" style="width:90px" /> in ';
+        echo '<input type="number" min="60" step="60" name="' . esc_attr(Airtable_Directory_CF7_Integration::OPT_RATE_LIMIT_SECONDS) . '" value="' . esc_attr($win) . '" style="width:90px" /> seconds';
+        echo '<p class="description">Rate limit for contact form submissions per IP address.</p>';
     }
 
     /**
