@@ -199,7 +199,6 @@ class Airtable_Directory_Board_Details_Shortcode {
             return $output;
             
         } catch (Exception $e) {
-            error_log('Board details shortcode error: ' . $e->getMessage());
             return '<p>Error loading board details.</p>';
         }
     }

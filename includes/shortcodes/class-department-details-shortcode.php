@@ -72,11 +72,10 @@ class Airtable_Directory_Department_Details_Shortcode {
                     'filterByFormula' => "{fldwAR2a55bspWLPt} = '$department_id'"
                 );
                 
-                error_log('Department details query for ID: ' . $department_id);
+        
                 $departments = $this->api->fetch_data(AIRTABLE_DEPARTMENT_TABLE, $department_query_params);
                 
                 if (!$departments) {
-                    error_log('No department found for ID: ' . $department_id);
                     $output .= '<p>Department not found for ID: ' . esc_html($department_id) . '</p>';
                     continue; // Skip to next department ID
                 }
@@ -84,7 +83,7 @@ class Airtable_Directory_Department_Details_Shortcode {
                 $department = $departments[0];
                 $fields = isset($department['fields']) ? $department['fields'] : [];
                 
-                error_log('Department fields: ' . print_r($fields, true));
+
                 
                 // Extract department information
                 $name = isset($fields['Department Name']) ? esc_html($fields['Department Name']) : 'Unknown Department';
@@ -96,12 +95,14 @@ class Airtable_Directory_Department_Details_Shortcode {
                 $additional_info_raw = isset($fields['Additional Information']) ? $fields['Additional Information'] : '';
                 $additional_info = '';
                 if (!empty($additional_info_raw)) {
+                    // Escape first, then convert markdown links, then basic markdown, then linkify emails/phones
                     $escaped = esc_html($additional_info_raw);
+                    $markdown_links = $this->convert_markdown_links($escaped);
                     // Convert basic markdown (bold/italic) after escaping, then linkify
                     if (method_exists($this, 'format_basic_markdown')) {
-                        $escaped = $this->format_basic_markdown($escaped);
+                        $markdown_links = $this->format_basic_markdown($markdown_links);
                     }
-                    $additional_info = nl2br($this->linkify_contact_info($escaped));
+                    $additional_info = nl2br($this->linkify_contact_info($markdown_links));
                 }
                 
                 // Photo URL extraction logic (same as staff photos)
@@ -307,7 +308,6 @@ class Airtable_Directory_Department_Details_Shortcode {
             
             return $output;
         } catch (Exception $e) {
-            error_log('Error in department_details_shortcode: ' . $e->getMessage());
             return '<p>An error occurred while retrieving department details. Please try again later.</p>';
         }
     }
@@ -342,6 +342,41 @@ class Airtable_Directory_Department_Details_Shortcode {
             $text
         );
 
+        return $text;
+    }
+
+    /**
+     * Convert markdown-style links [text](url) to HTML links.
+     * This should be called after escaping to work with escaped text.
+     *
+     * @param string $text
+     * @return string
+     */
+    private function convert_markdown_links($text) {
+        // Convert markdown links [text](url) to HTML links
+        $text = preg_replace_callback(
+            '/\[([^\]]+)\]\(([^)]+)\)/',
+            function ($matches) {
+                $link_text = $matches[1];
+                $url = $matches[2];
+                
+                // Basic URL validation and sanitization
+                if (filter_var($url, FILTER_VALIDATE_URL) || strpos($url, 'http') === 0 || strpos($url, 'mailto:') === 0 || strpos($url, 'tel:') === 0) {
+                    return '<a href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer">' . $link_text . '</a>';
+                } else {
+                    // If URL doesn't start with http/https/mailto/tel, assume it's relative or add https
+                    if (strpos($url, '/') === 0) {
+                        // Relative URL
+                        return '<a href="' . esc_url($url) . '">' . $link_text . '</a>';
+                    } else {
+                        // Assume external URL and add https
+                        return '<a href="' . esc_url('https://' . $url) . '" target="_blank" rel="noopener noreferrer">' . $link_text . '</a>';
+                    }
+                }
+            },
+            $text
+        );
+        
         return $text;
     }
 

@@ -503,27 +503,27 @@ class Airtable_Directory_Admin {
                     );
                 }
             }
-            error_log('[Airtable Directory] Final decoded field mapping: ' . print_r($decoded_field_mapping, true));
+            // Field mapping decoded successfully
         } else {
-            error_log('[Airtable Directory] field_mapping is empty');
+            // Field mapping is empty
         }
         // Fetch staff records for matching if mapping submitted
         $staff_lookup = array();
         if ($mapping_submitted && !empty($decoded_field_mapping)) {
             $staff_records = $this->api->fetch_data($staff_table_id, array('fields' => array_values($airtable_fields)));
-            error_log('[Airtable Directory] Number of Airtable staff records: ' . count($staff_records));
+            // Processing Airtable staff records
             if (!empty($staff_records)) {
-                error_log('[Airtable Directory] Example Airtable record: ' . print_r($staff_records[0], true));
+                // Example record available
             }
             $debug_airtable_names = array();
             foreach ($staff_records as $record) {
                 $fields = isset($record['fields']) ? $record['fields'] : array();
                 if (!array_key_exists($name_field_name, $fields)) {
-                    error_log('[Airtable Directory] Name field "' . $name_field_name . '" missing in record: ' . print_r($fields, true));
+                    // Name field missing in record
                 }
                 if (!empty($fields[$name_field_name])) {
                     $norm_name = normalize_name($fields[$name_field_name]);
-                    error_log('[Airtable Directory] Airtable staff name: "' . $fields[$name_field_name] . '" | Normalized: "' . $norm_name . '"');
+                    // Processing staff name
                     $staff_lookup[$norm_name] = $fields;
                     $debug_airtable_names[] = $norm_name;
                 }
@@ -538,7 +538,7 @@ class Airtable_Directory_Admin {
             
             // Use the decoded mapping directly
             $reconstructed_mapping = $decoded_field_mapping;
-            error_log('[Airtable Directory] ADD: Starting add process with mapping: ' . count($reconstructed_mapping) . ' fields');
+            // Starting add process
             
             if (!empty($add_new_selected) && !empty($reconstructed_mapping)) {
                 // Re-read the CSV to get all rows
@@ -609,21 +609,21 @@ class Airtable_Directory_Admin {
                                 }
                             }
                             
-                            error_log('[Airtable Directory] ADD: Processing "' . $csv_name . '" with ' . count($airtable_fields_data) . ' fields');
+                            // Processing CSV record
                             
                             // Add the record
                             if (!empty($airtable_fields_data)) {
                                 $result = $this->api->add_record($staff_table_id, $airtable_fields_data);
                                 if ($result) {
                                     $processed_count++;
-                                    error_log('[Airtable Directory] ADD: Success for "' . $csv_name . '"');
+                                    // Record added successfully
                                 } else {
                                     $errors[] = 'Failed to add record for: ' . $csv_name;
-                                    error_log('[Airtable Directory] ADD: Failed for "' . $csv_name . '"');
+                                    // Record failed to add
                                 }
                             } else {
                                 $errors[] = 'No valid data for: ' . $csv_name;
-                                error_log('[Airtable Directory] No valid data for: ' . $csv_name);
+                                // No valid data for record
                             }
                         }
                     }

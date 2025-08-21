@@ -20,16 +20,12 @@ class Airtable_Directory_API {
      * @return array
      */
     public function fetch_data($table, $query_params = array()) {
-        error_log('fetch_data called for table: ' . $table . ' with query_params: ' . print_r($query_params, true));
-        
         // Create a unique transient key for this query
         $transient_key = 'airtable_' . md5($table . serialize($query_params));
-        error_log('fetch_data transient_key: ' . $transient_key);
         
         // Check if we have cached data
         $cached_data = get_transient($transient_key);
         if ($cached_data !== false) {
-            error_log('Using cached data for ' . $table);
             return $cached_data;
         }
     
@@ -55,8 +51,7 @@ class Airtable_Directory_API {
                 $url .= '?' . http_build_query($current_params);
             }
             
-            // Log the URL for debugging (masking sensitive info)
-            error_log('Airtable API URL: ' . preg_replace('/Bearer\s+[a-zA-Z0-9]+/', 'Bearer XXXXX', $url));
+            // Build the API URL
             
             $args = array(
                 'headers' => array(
@@ -67,27 +62,19 @@ class Airtable_Directory_API {
             
             $response = wp_remote_get($url, $args);
             if (is_wp_error($response)) {
-                error_log('Airtable API Error: ' . $response->get_error_message());
                 return $all_records; // Return whatever we have so far
             }
             
             $body = wp_remote_retrieve_body($response);
             $data = json_decode($body, true);
             
-            error_log('Airtable API response status: ' . wp_remote_retrieve_response_code($response));
-            error_log('Airtable API response body: ' . substr($body, 0, 500) . '...');
-            
             if (isset($data['records']) && is_array($data['records'])) {
                 // Add this page of records to our collection
                 $all_records = array_merge($all_records, $data['records']);
                 
-                // Log how many records we've fetched so far
-                error_log('Fetched ' . count($data['records']) . ' records from Airtable, total: ' . count($all_records));
-                
                 // Check if there are more records to fetch
                 $offset = isset($data['offset']) ? $data['offset'] : null;
             } else {
-                error_log('No records found in API response or error occurred');
                 $offset = null; // No more records or error
             }
             
@@ -98,8 +85,7 @@ class Airtable_Directory_API {
             
         } while ($offset); // Continue until no more offset is returned
         
-        // Log the total number of records fetched
-        error_log('Total records fetched from ' . $table . ': ' . count($all_records));
+
         
         // Cache the data for 12 hours
         if (!empty($all_records)) {
@@ -220,11 +206,8 @@ class Airtable_Directory_API {
     public function is_staff_public($staff_record) {
         $fields = isset($staff_record['fields']) ? $staff_record['fields'] : array();
         
-        // Debug logging to understand the Public field format
-        if (isset($fields['Public'])) {
-            error_log('Public field found for staff member. Value: ' . print_r($fields['Public'], true) . ' Type: ' . gettype($fields['Public']));
-        } else {
-            error_log('No Public field found for staff member: ' . (isset($fields['Name']) ? $fields['Name'] : 'Unknown'));
+        // Check if Public field exists
+        if (!isset($fields['Public'])) {
             return false;
         }
         
@@ -235,24 +218,21 @@ class Airtable_Directory_API {
             // If unchecked, it may be empty array, null, or false
             if (is_array($fields['Public'])) {
                 $is_public = !empty($fields['Public']);
-                error_log('Array Public field - Is public: ' . ($is_public ? 'true' : 'false'));
                 return $is_public;
             }
             // Handle boolean values
             elseif (is_bool($fields['Public'])) {
-                error_log('Boolean Public field: ' . ($fields['Public'] ? 'true' : 'false'));
                 return $fields['Public'];
             }
             // Handle string values like 'Yes', 'True', etc.
             elseif (is_string($fields['Public'])) {
                 $value = strtolower(trim($fields['Public']));
                 $is_public = in_array($value, array('yes', 'true', '1', 'on'));
-                error_log('String Public field "' . $fields['Public'] . '" - Is public: ' . ($is_public ? 'true' : 'false'));
                 return $is_public;
             }
             // Handle other types
             else {
-                error_log('Unknown Public field type: ' . gettype($fields['Public']) . ' Value: ' . print_r($fields['Public'], true));
+                // Unknown type, default to false
             }
         }
         
@@ -289,17 +269,13 @@ class Airtable_Directory_API {
      * @return array Array of staff records
      */
     public function get_staff_by_department($department_name, $public_only = true) {
-        error_log("Getting staff for department: " . $department_name);
-        
         // First, get the department record to find its record ID
         $department = $this->get_department_by_name($department_name);
         if (!$department) {
-            error_log("Department not found: " . $department_name);
             return array();
         }
         
         $department_record_id = $department['id'];
-        error_log("Department record ID: " . $department_record_id);
         
         // Get all staff records and filter by those who have this department's record ID in their Departments array
         $staff_query_params = array(
@@ -307,7 +283,6 @@ class Airtable_Directory_API {
         );
         
         $all_staff = $this->fetch_data(AIRTABLE_STAFF_TABLE_ID, $staff_query_params);
-        error_log("Total staff records fetched: " . count($all_staff));
         
         $department_staff = array();
         
@@ -321,18 +296,14 @@ class Airtable_Directory_API {
                 
                 // Check if this department record ID is in the staff member's departments
                 if (in_array($department_record_id, $staff_departments)) {
-                    error_log("Found staff member " . (isset($fields['Name']) ? $fields['Name'] : 'Unknown') . " in department " . $department_name);
                     $department_staff[] = $staff_record;
                 }
             }
         }
         
-        error_log("Found " . count($department_staff) . " staff members in department " . $department_name);
-        
         // Filter to only public staff if requested
         if ($public_only) {
             $department_staff = $this->filter_public_staff($department_staff);
-            error_log("After filtering for public staff: " . count($department_staff) . " results");
         }
         
         // Sort staff: Display Order (>= 0) first ascending, then the rest alphabetically by Name
@@ -480,7 +451,7 @@ class Airtable_Directory_API {
             $wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '_transient_airtable_%' OR option_name LIKE '_transient_timeout_airtable_%'");
             // Force WordPress to update its internal cache
             wp_cache_flush();
-            error_log('Cleared all Airtable cache entries');
+            // Cleared all Airtable cache entries
         } else {
             // Clear cache for specific table
             if (empty($query_params)) {
@@ -491,12 +462,12 @@ class Airtable_Directory_API {
                     '_transient_timeout_' . $prefix . '%'
                 ));
                 wp_cache_flush();
-                error_log('Cleared cache for table: ' . $table);
+                // Cleared cache for table
             } else {
                 // Clear cache for specific query
                 $transient_key = 'airtable_' . md5($table . serialize($query_params));
                 delete_transient($transient_key);
-                error_log('Cleared cache for specific query: ' . $transient_key);
+                // Cleared cache for specific query
             }
         }
     }
@@ -514,7 +485,7 @@ class Airtable_Directory_API {
         // Clear general table caches
         $this->clear_cache();
         
-        error_log('Cleared all directory-related caches');
+        // Cleared all directory-related caches
     }
     
     /**
@@ -679,7 +650,6 @@ class Airtable_Directory_API {
         $board = $this->get_board_by_record_id($board_record_id);
         
         if (!$board) {
-            error_log("Board not found for record ID: " . $board_record_id);
             return array();
         }
         
@@ -689,11 +659,9 @@ class Airtable_Directory_API {
         // Check for Board Members array
         if (isset($fields['Board Members']) && is_array($fields['Board Members'])) {
             $board_member_ids = $fields['Board Members'];
-            error_log("Found Board Members array: " . print_r($board_member_ids, true));
         }
         
         if (empty($board_member_ids)) {
-            error_log("No board member IDs found for board " . $board_record_id);
             return array();
         }
         
@@ -704,15 +672,12 @@ class Airtable_Directory_API {
         }
         $filter_formula = "OR(" . implode(',', $filter_clauses) . ")";
         
-        error_log("Board members lookup filter formula: " . $filter_formula);
-        
         $board_members_query_params = array(
             'filterByFormula' => $filter_formula,
             'fields' => array('Name', 'Role on Board', 'Representative Type', 'Notes', 'Display Order')
         );
         
         $board_members_results = $this->fetch_data(AIRTABLE_BOARD_MEMBERS_TABLE, $board_members_query_params);
-        error_log("Board members lookup returned " . count($board_members_results) . " results");
         
         // Sort board members by display order
         $board_members_results = $this->sort_board_members_by_order($board_members_results);
@@ -803,7 +768,7 @@ class Airtable_Directory_API {
         delete_transient('airtable_board_slugs');
         delete_transient('airtable_board_member_slugs');
         
-        error_log('Cleared all board-related caches');
+        // Cleared all board-related caches
     }
 
     /**
@@ -835,7 +800,6 @@ class Airtable_Directory_API {
         $response = wp_remote_post($url, $args);
         
         if (is_wp_error($response)) {
-            error_log('Airtable API Error (add_record): ' . $response->get_error_message());
             return false;
         }
         
@@ -843,10 +807,8 @@ class Airtable_Directory_API {
         $result = json_decode($body, true);
         
         if (wp_remote_retrieve_response_code($response) === 200 && isset($result['id'])) {
-            error_log('Airtable record created successfully: ' . $result['id']);
             return $result;
         } else {
-            error_log('Airtable API Error (add_record): ' . $body);
             return false;
         }
     }
@@ -869,10 +831,7 @@ class Airtable_Directory_API {
             'fields' => $fields
         );
         
-        error_log('[Airtable Directory] API UPDATE: URL: ' . $url);
-        error_log('[Airtable Directory] API UPDATE: Record ID: ' . $record_id);
-        error_log('[Airtable Directory] API UPDATE: Fields count: ' . count($fields));
-        error_log('[Airtable Directory] API UPDATE: Fields: ' . print_r($fields, true));
+
         
         $args = array(
             'headers' => array(
@@ -886,7 +845,6 @@ class Airtable_Directory_API {
         $response = wp_remote_request($url, $args);
         
         if (is_wp_error($response)) {
-            error_log('[Airtable Directory] API UPDATE: WP Error: ' . $response->get_error_message());
             return false;
         }
         
@@ -894,14 +852,9 @@ class Airtable_Directory_API {
         $body = wp_remote_retrieve_body($response);
         $result = json_decode($body, true);
         
-        error_log('[Airtable Directory] API UPDATE: Response code: ' . $response_code);
-        error_log('[Airtable Directory] API UPDATE: Response body: ' . $body);
-        
         if ($response_code === 200 && isset($result['id'])) {
-            error_log('[Airtable Directory] API UPDATE: Success for record: ' . $result['id']);
             return $result;
         } else {
-            error_log('[Airtable Directory] API UPDATE: Failed - Code: ' . $response_code . ', Body: ' . $body);
             return false;
         }
     }
@@ -913,6 +866,6 @@ class Airtable_Directory_API {
      */
     public function clear_table_cache($table_id) {
         $this->clear_cache($table_id);
-        error_log('Cleared cache for table: ' . $table_id);
+        // Cleared cache for table
     }
 } 

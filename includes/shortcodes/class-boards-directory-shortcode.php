@@ -215,7 +215,6 @@ class Airtable_Directory_Boards_Shortcode {
             return $output;
             
         } catch (Exception $e) {
-            error_log('Boards directory shortcode error: ' . $e->getMessage());
             return '<p>Error loading boards directory.</p>';
         }
     }

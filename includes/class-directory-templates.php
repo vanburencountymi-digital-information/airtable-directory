@@ -65,13 +65,8 @@ class Airtable_Directory_Templates {
         
         // If no departments found, try warming up caches and retry once
         if (!$departments || empty($departments)) {
-            error_log("No departments found in directory index, attempting cache warm-up and retry");
             $this->routes->warm_up_caches();
             $departments = $this->api->fetch_data(AIRTABLE_DEPARTMENT_TABLE);
-            
-            if (!$departments || empty($departments)) {
-                error_log("Still no departments found after cache warm-up");
-            }
         }
         
         ob_start();
@@ -86,19 +81,7 @@ class Airtable_Directory_Templates {
             
             <?php if ($departments && !empty($departments)): ?>
                 <?php 
-                // DEBUG: Log all departments and their parent relationships
-                error_log("=== DIRECTORY DEBUG START ===");
-                error_log("Total departments fetched: " . count($departments));
-                
-                // First, let's see what fields are available in the first department
-                if (!empty($departments)) {
-                    $first_dept = $departments[0];
-                    $fields = isset($first_dept['fields']) ? $first_dept['fields'] : array();
-                    error_log("Available fields in first department: " . implode(', ', array_keys($fields)));
-                    
-                    // Log a sample department's complete data
-                    error_log("Sample department data: " . print_r($first_dept, true));
-                }
+                // Process departments and their parent relationships
                 
                 // Group departments by parent/child relationship
                 $parent_departments = array();
@@ -115,8 +98,6 @@ class Airtable_Directory_Templates {
                     // Check for Parent ID field (the correct field name)
                     $parent_id = isset($fields['Parent ID']) ? $fields['Parent ID'] : '';
                     
-                    error_log("Department: '$dept_name', Parent ID: '$parent_id'");
-                    
                     if (!empty($dept_name)) {
                         $all_departments_by_name[$dept_name] = $dept;
                         if (!empty($dept_id)) {
@@ -126,20 +107,17 @@ class Airtable_Directory_Templates {
                         if (empty($parent_id)) {
                             // This is a top-level department (no parent)
                             $parent_departments[] = $dept;
-                            error_log("  -> Added to parent_departments (top-level)");
                         } else {
                             // This is a child department
                             if (!isset($child_departments[$parent_id])) {
                                 $child_departments[$parent_id] = array();
                             }
                             $child_departments[$parent_id][] = $dept;
-                            error_log("  -> Added to child_departments under Parent ID '$parent_id'");
                         }
                     }
                 }
                 
-                error_log("Parent departments found: " . count($parent_departments));
-                error_log("Child department groups: " . count($child_departments));
+
                 
                 // Build exclusion set: 'Townships', 'Villages', 'Cities' and all their descendants
                 $excluded_root_names = array('Townships', 'Villages', 'Cities');
@@ -188,7 +166,7 @@ class Airtable_Directory_Templates {
                     }
                 }
                 
-                error_log("All potential categories created: " . count($all_categories));
+
                 
                 // Now filter out departments that have a parent
                 $categories = array();
@@ -200,24 +178,19 @@ class Airtable_Directory_Templates {
                     // Check for Parent ID field
                     $has_parent = isset($fields['Parent ID']) && !empty($fields['Parent ID']);
                     
-                    if ($has_parent) {
-                        error_log("Filtering out '$dept_name' - has Parent ID: '" . $fields['Parent ID'] . "'");
-                    } else {
+                    if (!$has_parent) {
                         // This department has no parent, so it becomes a category
                         // (even if it's excluded from display, it can still serve as a category container)
                         $categories[] = $category;
-                        error_log("Keeping '$dept_name' as category - no Parent ID found");
                     }
                 }
                 
-                error_log("Categories after filtering: " . count($categories));
+
                 
                 // Create categories from top-level departments only
                 foreach ($categories as &$category) {
                     $dept_name = $category['name'];
                     $dept_id = isset($category['department']['fields']['Department ID']) ? $category['department']['fields']['Department ID'] : '';
-                    
-                    error_log("Processing category: '$dept_name' (Department ID: '$dept_id')");
                     
                     // Get all departments that belong to this category (parent + children)
                     $category_departments = array();
@@ -225,9 +198,6 @@ class Airtable_Directory_Templates {
                     // Add the parent department itself (only if not excluded)
                     if (!$this->is_department_excluded($dept_name)) {
                         $category_departments[] = $category['department'];
-                        error_log("  -> Added parent department to category");
-                    } else {
-                        error_log("  -> Excluded parent department '$dept_name' from display (category only)");
                     }
                     
                     // Add all child departments recursively
@@ -251,14 +221,11 @@ class Airtable_Directory_Templates {
                         }
                     }
                     $category_departments = $deduped;
-                    error_log("  -> After adding children, filtering excluded, and de-dup, category has " . count($category_departments) . " departments");
                     
                     $category['departments'] = $category_departments;
                 }
                 // Prevent pesky foreach-by-reference side effects
                 unset($category);
-                
-                error_log("Categories created: " . count($categories));
                 
                 // Sort categories alphabetically by name
                 usort($categories, function($a, $b) {
@@ -305,7 +272,7 @@ class Airtable_Directory_Templates {
                 }
                 unset($category);
                 
-                error_log("Categories and departments sorted");
+
                 
                 // Find truly uncategorized departments (those with no parent but not used as categories)
                 $uncategorized_departments = array();
@@ -341,11 +308,8 @@ class Airtable_Directory_Templates {
                     // If not in any category and has no parent, it's uncategorized
                     if (!$has_parent) {
                         $uncategorized_departments[] = $dept;
-                        error_log("Uncategorized department: '$dept_name' (ID: $dept_id)'");
                     }
                 }
-                
-                error_log("Uncategorized departments: " . count($uncategorized_departments));
                 
                 // Sort uncategorized departments alphabetically
                 usort($uncategorized_departments, function($a, $b) {
@@ -355,8 +319,6 @@ class Airtable_Directory_Templates {
                     $b_name = isset($b_fields['Department Name']) ? $b_fields['Department Name'] : '';
                     return strcasecmp($a_name, $b_name);
                 });
-                
-                error_log("=== DIRECTORY DEBUG END ===");
                 ?>
 
                 <!-- Category Navigation -->
@@ -463,13 +425,11 @@ class Airtable_Directory_Templates {
         
         if (!$resolved) {
             // Try warming up caches and retry once
-            error_log("Slug '$slug' not found, attempting cache warm-up and retry");
             $this->routes->warm_up_caches();
             $resolved = $this->routes->resolve_slug($slug);
             
             if (!$resolved) {
                 // Still not found after cache warm-up, show 404
-                error_log("Slug '$slug' still not found after cache warm-up");
                 $this->render_404();
                 return;
             }
@@ -508,21 +468,17 @@ class Airtable_Directory_Templates {
             </div>
             
             <?php
-            error_log("Rendering department page for Name: " . $department_name);
-            
             // Get department data for details display
             $department_data = $this->api->get_department_by_name($department_name);
             if ($department_data) {
                 $this->render_department_details($department_data);
             } else {
                 echo '<p>Department details not found.</p>';
-                error_log("Department data not found for Name: " . $department_name);
             }
             
             // Show staff members in this department
             echo '<h3>Staff Members</h3>';
             $staff_members = $this->api->get_staff_by_department($department_name);
-            error_log("Found " . count($staff_members) . " staff members for department " . $department_name);
             
             if ($staff_members && count($staff_members) > 0) {
                 $this->render_staff_grid($staff_members, $department_name);
@@ -532,7 +488,6 @@ class Airtable_Directory_Templates {
             
             // Show child departments if any
             $child_departments = $this->api->get_child_departments($department_data);
-            error_log("Found " . count($child_departments) . " child departments for department " . $department_name);
             
             if (!empty($child_departments)) {
                 
@@ -1396,11 +1351,8 @@ class Airtable_Directory_Templates {
      * @param array $category_departments Reference to the array to which child departments will be added
      */
     private function add_child_departments_recursive($parent_id, $child_departments_lookup, $all_departments_by_id, &$category_departments, &$visited_ids = array()) {
-        error_log("  Recursive call for parent ID: '$parent_id'");
-
         // Prevent cycles/duplicates by tracking visited IDs
         if (!empty($parent_id) && isset($visited_ids[$parent_id])) {
-            error_log("    Skipping parent ID '$parent_id' (already visited)");
             return;
         }
         if (!empty($parent_id)) {
@@ -1408,18 +1360,13 @@ class Airtable_Directory_Templates {
         }
         
         if (isset($child_departments_lookup[$parent_id])) {
-            error_log("    Found " . count($child_departments_lookup[$parent_id]) . " children for Parent ID '$parent_id'");
-            
             foreach ($child_departments_lookup[$parent_id] as $child_dept) {
                 $child_fields = isset($child_dept['fields']) ? $child_dept['fields'] : array();
                 $child_name = isset($child_fields['Department Name']) ? $child_fields['Department Name'] : '';
                 $child_id = isset($child_fields['Department ID']) ? $child_fields['Department ID'] : '';
                 
-                error_log("    Processing child: '$child_name' (ID: '$child_id')");
-                
                 // Avoid re-adding already visited child
                 if (!empty($child_id) && isset($visited_ids[$child_id])) {
-                    error_log("      -> Skipping '$child_name' (already visited)");
                     continue;
                 }
                 
@@ -1428,9 +1375,6 @@ class Airtable_Directory_Templates {
                     if (!$this->is_department_excluded($child_name)) {
                         // Add this child department to the category
                         $category_departments[] = $child_dept;
-                        error_log("      -> Added '$child_name' to category");
-                    } else {
-                        error_log("      -> Excluded child department '$child_name' from display (category only)");
                     }
                     
                     // Recursively add this child's children (regardless of whether this child is displayed)
@@ -1440,8 +1384,6 @@ class Airtable_Directory_Templates {
                     }
                 }
             }
-        } else {
-            error_log("    No children found for Parent ID '$parent_id'");
         }
     }
 

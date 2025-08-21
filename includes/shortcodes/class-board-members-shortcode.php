@@ -152,7 +152,6 @@ class Airtable_Directory_Board_Members_Shortcode {
             return $output;
             
         } catch (Exception $e) {
-            error_log('Board members shortcode error: ' . $e->getMessage());
             return '<p>Error loading board members.</p>';
         }
     }

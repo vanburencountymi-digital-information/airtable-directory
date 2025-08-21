@@ -196,7 +196,7 @@ class Airtable_Directory_Staff_Shortcode {
     
                 // Add debug logging to see photo field structure
                 if (isset($fields['Photo'])) {
-                    error_log('Photo field structure: ' . print_r($fields['Photo'], true));
+    
                 }
     
                 $name  = isset($fields['Name']) ? esc_html($fields['Name']) : 'Unknown';
@@ -284,7 +284,6 @@ class Airtable_Directory_Staff_Shortcode {
     
             return $output;
         } catch (Exception $e) {
-            error_log('Error in staff_directory_shortcode: ' . $e->getMessage());
             return '<p>An error occurred while retrieving the staff directory. Please try again later.</p>';
         }
     }

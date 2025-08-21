@@ -311,7 +311,6 @@ class Airtable_Directory_Searchable_Staff_Shortcode {
 
             return $output;
         } catch (Exception $e) {
-            error_log('Error in searchable_staff_directory_shortcode: ' . $e->getMessage());
             return '<p>An error occurred while retrieving the staff directory. Please try again later.</p>';
         }
     }

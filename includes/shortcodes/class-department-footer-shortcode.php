@@ -148,9 +148,10 @@ class Airtable_Directory_Department_Footer_Shortcode {
                 $additional_info_raw = isset($fields['Additional Information']) ? $fields['Additional Information'] : '';
                 $additional_info = '';
                 if (!empty($additional_info_raw)) {
-                    // Escape first, then convert basic markdown, then linkify
+                    // Escape first, then convert markdown links, then basic markdown, then linkify emails/phones
                     $escaped = esc_html($additional_info_raw);
-                    $markdown = $this->format_basic_markdown($escaped);
+                    $markdown_links = $this->convert_markdown_links($escaped);
+                    $markdown = $this->format_basic_markdown($markdown_links);
                     $linked  = $this->linkify_contact_info($markdown);
                     $additional_info = nl2br($linked);
                 }
@@ -350,7 +351,6 @@ class Airtable_Directory_Department_Footer_Shortcode {
             
             return $output;
         } catch (Exception $e) {
-            error_log('Error in department_footer_shortcode: ' . $e->getMessage());
             return '<p>An error occurred while retrieving department details. Please try again later.</p>';
         }
     }
@@ -407,6 +407,41 @@ class Airtable_Directory_Department_Footer_Shortcode {
             $text
         );
 
+        return $text;
+    }
+
+    /**
+     * Convert markdown-style links [text](url) to HTML links.
+     * This should be called after escaping to work with escaped text.
+     *
+     * @param string $text
+     * @return string
+     */
+    private function convert_markdown_links($text) {
+        // Convert markdown links [text](url) to HTML links
+        $text = preg_replace_callback(
+            '/\[([^\]]+)\]\(([^)]+)\)/',
+            function ($matches) {
+                $link_text = $matches[1];
+                $url = $matches[2];
+                
+                // Basic URL validation and sanitization
+                if (filter_var($url, FILTER_VALIDATE_URL) || strpos($url, 'http') === 0 || strpos($url, 'mailto:') === 0 || strpos($url, 'tel:') === 0) {
+                    return '<a href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer">' . $link_text . '</a>';
+                } else {
+                    // If URL doesn't start with http/https/mailto/tel, assume it's relative or add https
+                    if (strpos($url, '/') === 0) {
+                        // Relative URL
+                        return '<a href="' . esc_url($url) . '">' . $link_text . '</a>';
+                    } else {
+                        // Assume external URL and add https
+                        return '<a href="' . esc_url('https://' . $url) . '" target="_blank" rel="noopener noreferrer">' . $link_text . '</a>';
+                    }
+                }
+            },
+            $text
+        );
+        
         return $text;
     }
 
