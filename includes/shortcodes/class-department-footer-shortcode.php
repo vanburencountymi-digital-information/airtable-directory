@@ -12,12 +12,24 @@ class Airtable_Directory_Department_Footer_Shortcode {
     private $api;
     
     /**
+     * Routes instance for slug resolution
+     *
+     * @var Airtable_Directory_Routes
+     */
+    private $routes;
+    
+    /**
      * Constructor
      *
      * @param Airtable_Directory_API $api API instance
      */
     public function __construct($api) {
         $this->api = $api;
+        
+        // Initialize routes for slug resolution
+        require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-directory-routes.php';
+        $this->routes = new Airtable_Directory_Routes($api);
+        
         add_shortcode('department_footer', array($this, 'department_footer_shortcode'));
     }
     
@@ -138,7 +150,8 @@ class Airtable_Directory_Department_Footer_Shortcode {
                 $fields = isset($department['fields']) ? $department['fields'] : [];
                 
                 // Extract department information
-                $name = isset($fields['Department Name']) ? esc_html($fields['Department Name']) : 'Unknown Department';
+                $raw_name = isset($fields['Department Name']) ? $fields['Department Name'] : 'Unknown Department';
+                $name = esc_html($raw_name);
                 $physical_address = isset($fields['Physical Address']) ? nl2br(esc_html($fields['Physical Address'])) : 'No address available';
                 $mailing_address = isset($fields['Mailing Address']) ? nl2br(esc_html($fields['Mailing Address'])) : 'No address available';
                 $phone = isset($fields['Phone']) ? esc_html($fields['Phone']) : 'No phone available';
@@ -187,7 +200,7 @@ class Airtable_Directory_Department_Footer_Shortcode {
                     $output .= '</div>';
                     
                     // Generate directory link using the slug system
-                    $slug = $this->generate_directory_slug($name);
+                    $slug = $this->generate_directory_slug($raw_name);
                     if (!empty($slug)) {
                         // Determine if this department is excluded from directory routes (Townships/Villages/Cities descendants)
                         $is_excluded = false;
@@ -209,7 +222,7 @@ class Airtable_Directory_Department_Footer_Shortcode {
                             $parent_id = isset($pfields['Parent ID']) ? $pfields['Parent ID'] : '';
                         }
                         // Also exclude if this department itself is an excluded root
-                        if (in_array($name, $excluded_roots, true)) {
+                        if (in_array($raw_name, $excluded_roots, true)) {
                             $is_excluded = true;
                         }
                         
@@ -356,24 +369,24 @@ class Airtable_Directory_Department_Footer_Shortcode {
     }
 
     /**
-     * Generates a slug for a department name.
+     * Generates a slug for a department name using the routes system.
      *
      * @param string $name The department name.
      * @return string The generated slug.
      */
     private function generate_directory_slug($name) {
-        // Convert department name to lowercase and replace spaces with hyphens
-        $slug = sanitize_title($name);
+        // Get department slug mappings from routes
+        $dept_mappings = $this->routes->get_department_slug_mappings();
         
-        // Ensure uniqueness if the slug already exists
-        $original_slug = $slug;
-        $counter = 1;
-        while (get_page_by_path($slug, OBJECT, 'directory_page')) {
-            $slug = $original_slug . '-' . $counter;
-            $counter++;
+        // Find the mapping for this department name
+        foreach ($dept_mappings as $slug => $mapping) {
+            if ($mapping['type'] === 'department' && $mapping['name'] === $name) {
+                return $slug;
+            }
         }
         
-        return $slug;
+        // Fallback: generate slug using routes method if not found in mappings
+        return $this->routes->generate_slug($name);
     }
 
     /**

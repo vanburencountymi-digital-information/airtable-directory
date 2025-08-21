@@ -99,6 +99,13 @@ class Airtable_Directory_Routes {
             case 'single':
                 $slug = get_query_var('directory_slug');
                 if ($slug) {
+                    // Check for redirects before processing the slug
+                    $redirect_slug = $this->check_redirects($slug);
+                    if ($redirect_slug && $redirect_slug !== $slug) {
+                        wp_redirect(home_url('/directory/' . $redirect_slug . '/'));
+                        exit;
+                    }
+                    
                     $template_handler->render_single_page($slug);
                 } else {
                     // Redirect to directory index if no slug provided
@@ -112,6 +119,21 @@ class Airtable_Directory_Routes {
                 wp_redirect(home_url('/directory/'));
                 exit;
         }
+    }
+    
+    /**
+     * Check for redirects based on slug
+     *
+     * @param string $slug The slug to check for redirects
+     * @return string|false The redirect slug if found, false otherwise
+     */
+    public function check_redirects($slug) {
+        // Define redirect mappings
+        $redirects = array(
+            'sheriff' => 'sheriffs-office'
+        );
+        
+        return isset($redirects[$slug]) ? $redirects[$slug] : false;
     }
     
     /**
@@ -319,7 +341,6 @@ class Airtable_Directory_Routes {
             if ($this->validate_department_exists($mapping)) {
                 return $mapping;
             } else {
-                // Department mapping exists but data is missing - clear cache and retry
                 // Department mapping exists but data is missing - clear cache and retry
                 $this->clear_slug_cache();
                 return $this->resolve_slug($slug); // Recursive call after cache clear
