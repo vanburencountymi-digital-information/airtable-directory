@@ -22,13 +22,14 @@ class Airtable_Directory_Department_Footer_Shortcode {
      * Constructor
      *
      * @param Airtable_Directory_API $api API instance
+     * @param Airtable_Directory_CF7_Integration $cf7_integration CF7 integration instance (optional)
      */
-    public function __construct($api) {
+    public function __construct($api, $cf7_integration = null) {
         $this->api = $api;
         
         // Initialize routes for slug resolution
         require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-directory-routes.php';
-        $this->routes = new Airtable_Directory_Routes($api);
+        $this->routes = new Airtable_Directory_Routes($api, $cf7_integration);
         
         add_shortcode('department_footer', array($this, 'department_footer_shortcode'));
     }

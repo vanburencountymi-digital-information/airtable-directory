@@ -48,11 +48,11 @@ function airtable_directory_init() {
     // Initialize main plugin class
     $plugin = new Airtable_Directory($api);
     
-    // Initialize shortcodes
-    $shortcodes = new Airtable_Directory_Shortcodes($api);
-    
     // Initialize CF7 integration
     $cf7_integration = new Airtable_Directory_CF7_Integration($api);
+    
+    // Initialize shortcodes
+    $shortcodes = new Airtable_Directory_Shortcodes($api, $cf7_integration);
     
     // Initialize directory routes
     $routes = new Airtable_Directory_Routes($api, $cf7_integration);

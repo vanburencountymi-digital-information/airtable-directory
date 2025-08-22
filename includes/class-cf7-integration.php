@@ -30,13 +30,21 @@ class Airtable_Directory_CF7_Integration {
      *   echo $this->cf7->render_contact_block('department', $department_id_or_name, $department_name);
      */
     public function render_contact_block($entity_type, $entity_id_or_name, $display_name) {
-        error_log("CF7 Integration: render_contact_block called - Type: '$entity_type', ID: '$entity_id_or_name', Display: '$display_name'");
+        // Check if CF7 is active
+        if (!class_exists('WPCF7_ContactForm')) {
+            return '<p>Contact form not available - Contact Form 7 plugin is not active.</p>';
+        }
+        
         $form_id = $this->get_form_id();
         if (empty($form_id)) {
-            error_log("CF7 Integration: No form ID configured");
-            return ''; // not configured yet
+            return '<p>Contact form not available - Form ID not configured in settings.</p>';
         }
-        error_log("CF7 Integration: Using form ID: '$form_id'");
+
+        // Check if the form exists
+        $cf7_form = \WPCF7_ContactForm::find($form_id);
+        if (!$cf7_form) {
+            return '<p>Contact form not available - Form not found.</p>';
+        }
 
         // Store context in a short-lived nonce (verified on submit)
         $context = [

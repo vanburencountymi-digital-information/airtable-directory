@@ -139,7 +139,9 @@ class Airtable_Directory_Admin {
         if (isset($_POST['warm_caches']) && check_admin_referer('airtable_directory_warm_caches')) {
             // Initialize routes to access warm_up_caches method
             require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-directory-routes.php';
-            $routes = new Airtable_Directory_Routes($this->api);
+            require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-cf7-integration.php';
+            $cf7_integration = new Airtable_Directory_CF7_Integration($this->api);
+            $routes = new Airtable_Directory_Routes($this->api, $cf7_integration);
             $routes->warm_up_caches();
             echo '<div class="notice notice-success"><p>Caches warmed up successfully!</p></div>';
         }

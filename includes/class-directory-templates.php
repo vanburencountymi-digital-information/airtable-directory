@@ -44,11 +44,11 @@ class Airtable_Directory_Templates {
         
         // Initialize routes handler
         require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-directory-routes.php';
-        $this->routes = new Airtable_Directory_Routes($api);
+        $this->routes = new Airtable_Directory_Routes($api, $cf7_integration);
         
         // Initialize shortcodes handler to reuse existing functionality
         require_once AIRTABLE_DIRECTORY_PLUGIN_DIR . 'includes/class-shortcodes.php';
-        $this->shortcodes = new Airtable_Directory_Shortcodes($api);
+        $this->shortcodes = new Airtable_Directory_Shortcodes($api, $cf7_integration);
         
         $this->cf7 = $cf7_integration; // pass from bootstrap
     }

@@ -12,6 +12,13 @@ class Airtable_Directory_Shortcodes {
     private $api;
     
     /**
+     * CF7 integration instance
+     *
+     * @var Airtable_Directory_CF7_Integration
+     */
+    private $cf7;
+    
+    /**
      * Shortcode instances
      *
      * @var array
@@ -22,9 +29,11 @@ class Airtable_Directory_Shortcodes {
      * Constructor
      *
      * @param Airtable_Directory_API $api API instance
+     * @param Airtable_Directory_CF7_Integration $cf7_integration CF7 integration instance (optional)
      */
-    public function __construct($api) {
+    public function __construct($api, $cf7_integration = null) {
         $this->api = $api;
+        $this->cf7 = $cf7_integration;
         $this->load_shortcodes();
     }
     
@@ -55,7 +64,7 @@ class Airtable_Directory_Shortcodes {
         $this->shortcodes['staff_directory'] = new Airtable_Directory_Staff_Shortcode($this->api);
         $this->shortcodes['department_details'] = new Airtable_Directory_Department_Details_Shortcode($this->api);
         $this->shortcodes['searchable_staff_directory'] = new Airtable_Directory_Searchable_Staff_Shortcode($this->api);
-        $this->shortcodes['department_footer'] = new Airtable_Directory_Department_Footer_Shortcode($this->api);
+        $this->shortcodes['department_footer'] = new Airtable_Directory_Department_Footer_Shortcode($this->api, $this->cf7);
         $this->shortcodes['boards_directory'] = new Airtable_Directory_Boards_Shortcode($this->api);
         $this->shortcodes['board_members'] = new Airtable_Directory_Board_Members_Shortcode($this->api);
         $this->shortcodes['board_details'] = new Airtable_Directory_Board_Details_Shortcode($this->api);
